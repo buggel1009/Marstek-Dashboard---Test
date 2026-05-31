@@ -906,39 +906,97 @@
       font-weight: 700;
     }
 
-    .ed-discover-btn {
-      width: 100%;
-      padding: 11px 16px;
+    /* Kopiervorlage */
+    .ed-suggest-box {
+      background: rgba(0,0,0,0.06);
+      border: 1px solid var(--divider-color, rgba(0,0,0,0.12));
       border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .ed-suggest-head {
+      padding: 8px 12px;
+      background: rgba(0,229,179,0.07);
+      border-bottom: 1px solid var(--divider-color, rgba(0,0,0,0.1));
+      font-size: 11px;
+      color: var(--secondary-text-color, #64748b);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ed-suggest-prefix {
+      font-family: monospace;
+      font-weight: 700;
+      color: var(--primary-color, #00e5b3);
+    }
+
+    .ed-copy-all-btn {
+      font-size: 10px;
+      padding: 3px 10px;
+      border-radius: 20px;
       border: 1px solid var(--primary-color, #00e5b3);
       background: transparent;
       color: var(--primary-color, #00e5b3);
-      font-size: 13px;
-      font-weight: 500;
       cursor: pointer;
       font-family: inherit;
+      font-weight: 600;
       transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      margin-bottom: 12px;
     }
-    .ed-discover-btn:hover {
+    .ed-copy-all-btn:hover {
       background: var(--primary-color, #00e5b3);
       color: white;
     }
-
-    .ed-result {
-      font-size: 12px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      margin-bottom: 12px;
-      line-height: 1.5;
+    .ed-copy-all-btn.copied {
+      background: #22c55e;
+      border-color: #22c55e;
+      color: white;
     }
-    .ed-result.ok  { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); }
-    .ed-result.partial { background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); }
-    .ed-result.none { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); }
+
+    .ed-suggest-list {
+      max-height: 240px;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+
+    .ed-suggest-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 4px 12px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+    .ed-suggest-row:last-child { border-bottom: none; }
+    .ed-suggest-row:hover { background: rgba(0,0,0,0.04); }
+
+    .ed-suggest-lbl {
+      color: var(--secondary-text-color, #64748b);
+      flex-shrink: 0;
+      width: 130px;
+      font-size: 10px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ed-suggest-id {
+      font-family: monospace;
+      font-size: 10.5px;
+      color: var(--primary-text-color);
+      word-break: break-all;
+    }
+
+    .ed-no-prefix {
+      padding: 14px 12px;
+      font-size: 12px;
+      color: var(--secondary-text-color, #64748b);
+      text-align: center;
+      line-height: 1.6;
+    }
 
     ha-textfield, ha-entity-picker { display: block; width: 100%; margin-bottom: 8px; }
 
@@ -1595,8 +1653,6 @@
       this.attachShadow({ mode: 'open' });
       this._config = {};
       this._hass = null;
-      this._discoverMsg = null;
-      this._discoverType = null;
     }
 
     set hass(hass) {
@@ -1644,119 +1700,72 @@
       }));
     }
 
-    _autoDiscover() {
-      if (!this._hass) return;
-      const states = this._hass.states;
-      const allIds = Object.keys(states);
-      let found = 0;
-
-      // ── Schritt 1: Prefix aus bereits konfigurierten Entitäten ableiten ──
-      // (falls Nutzer eine Entität schon manuell gesetzt hat)
-      let inferredPrefix = '';
-      for (const def of ENTITY_DEFS) {
-        const id = this._config.entities[def.key];
-        if (!id) continue;
-        const domainDot = def.domain + '.';
-        if (!id.startsWith(domainDot)) continue;
-        const part = id.slice(domainDot.length);
-        const suffix = '_' + def.key;
-        if (part.endsWith(suffix)) {
-          inferredPrefix = part.slice(0, part.length - suffix.length);
-          break;
-        }
-      }
-
-      // Nutzer-Prefix bereinigen (Leerzeichen → _, Sonderzeichen entfernen)
-      const userPrefix = (this._config.entity_prefix || '')
-        .trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-
-      // Effektiver Prefix: abgeleitet > Nutzer-Prefix
-      const effectivePrefix = inferredPrefix || userPrefix;
-
-      // ── Schritt 2: Für jede Entitätsdefinition suchen ────────────────────
-      ENTITY_DEFS.forEach(def => {
-        if (this._config.entities[def.key]) return; // schon gesetzt
-
-        const keySuffix = '_' + def.key;
-        const domainDot = def.domain + '.';
-
-        // 2a. Exakter Treffer: {domain}.{prefix}_{key}
-        if (effectivePrefix) {
-          const exact = domainDot + effectivePrefix + keySuffix;
-          if (states[exact]) {
-            this._config.entities[def.key] = exact;
-            found++;
-            return;
-          }
-        }
-
-        // 2b. Bekannte Marstek-Muster (fester Domänenname)
-        const knownPatterns = [
-          domainDot + 'marstek_venus_energy_manager_' + def.key,
-          domainDot + 'marstek_venus_' + def.key,
-          domainDot + 'marstek_' + def.key,
-        ];
-        for (const p of knownPatterns) {
-          if (states[p]) {
-            this._config.entities[def.key] = p;
-            found++;
-            return;
-          }
-        }
-
-        // 2c. Breit scannen: alle Entitäten der richtigen Domäne,
-        //     deren ID auf _{key} endet → ohne Prefix-Zwang
-        const matches = allIds.filter(id => {
-          if (!id.startsWith(domainDot)) return false;
-          const part = id.slice(domainDot.length);
-          // Muss auf _{key} enden
-          if (!part.endsWith(keySuffix)) return false;
-          // Falls Prefix angegeben: muss damit beginnen
-          if (effectivePrefix && !part.startsWith(effectivePrefix)) return false;
-          return true;
-        });
-
-        if (matches.length === 1) {
-          this._config.entities[def.key] = matches[0];
-          found++;
-        } else if (matches.length > 1) {
-          // Mehrere Treffer → bevorzuge Marstek/Venus-Entitäten
-          const preferred =
-            matches.find(m => m.includes('marstek')) ||
-            matches.find(m => m.includes('venus')) ||
-            matches[0];
-          this._config.entities[def.key] = preferred;
-          found++;
-        }
-      });
-
-      // ── Ergebnis-Meldung ─────────────────────────────────────────────────
-      const total = ENTITY_DEFS.length;
-      if (found === 0) {
-        this._discoverType = 'none';
-        const hint = effectivePrefix
-          ? `Prefix „${effectivePrefix}" geprüft, aber keine passenden Entitäten gefunden.`
-          : 'Tipp: Geräte-Prefix eingeben (z. B. „meine_batterie") und erneut versuchen.';
-        this._discoverMsg = `⚠ Keine Entitäten erkannt. ${hint}`;
-      } else if (found < 5) {
-        this._discoverType = 'partial';
-        this._discoverMsg = `✓ ${found} Entität${found === 1 ? '' : 'en'} gefunden (von ${total} möglichen). Restliche bitte manuell zuweisen.`;
-      } else {
-        this._discoverType = 'ok';
-        this._discoverMsg = `✓ ${found} Entität${found === 1 ? '' : 'en'} automatisch gefunden und zugewiesen!`;
-      }
-
-      this._fire();
-      this._render();
-    }
-
     _render() {
-      const cfg = this._config;
+      const cfg  = this._config;
       const ents = cfg.entities || {};
+      const prefix = (cfg.entity_prefix || '').trim();
 
-      // Wichtig: .hass / .value / .includeDomains NICHT im Template setzen!
-      // innerHTML unterstützt keine Lit-Property-Bindings — Objekte würden als
-      // "[object Object]" ankommen. Sie werden NACH dem Rendern per JS gesetzt.
+      // ── Kopiervorlage: Entity-IDs aus Prefix generieren ──────────────────
+      // Welche Entity-IDs erscheinen in der Vorschau (nur die wichtigsten)
+      const SUGGEST_DEFS = [
+        { key: 'battery_soc',                   domain: 'sensor'        },
+        { key: 'battery_power',                  domain: 'sensor'        },
+        { key: 'battery_voltage',                domain: 'sensor'        },
+        { key: 'battery_total_energy',           domain: 'sensor'        },
+        { key: 'internal_temperature',           domain: 'sensor'        },
+        { key: 'ac_power',                       domain: 'sensor'        },
+        { key: 'ac_offgrid_power',               domain: 'sensor'        },
+        { key: 'total_daily_charging_energy',    domain: 'sensor'        },
+        { key: 'total_daily_discharging_energy', domain: 'sensor'        },
+        { key: 'total_charging_energy',          domain: 'sensor'        },
+        { key: 'total_discharging_energy',       domain: 'sensor'        },
+        { key: 'stored_energy',                  domain: 'sensor'        },
+        { key: 'battery_cycle_count_calc',       domain: 'sensor'        },
+        { key: 'round_trip_efficiency_total',    domain: 'sensor'        },
+        { key: 'max_cell_voltage',               domain: 'sensor'        },
+        { key: 'min_cell_voltage',               domain: 'sensor'        },
+        { key: 'balance_status',                 domain: 'sensor'        },
+        { key: 'balance_last_measurement',       domain: 'sensor'        },
+        { key: 'balance_delta_avg',              domain: 'sensor'        },
+        { key: 'balance_cell_delta_100',         domain: 'sensor'        },
+        { key: 'balance_trend',                  domain: 'sensor'        },
+        { key: 'fault_status',                   domain: 'sensor'        },
+        { key: 'alarm_status',                   domain: 'sensor'        },
+        { key: 'inverter_state',                 domain: 'sensor'        },
+        { key: 'wifi_status',                    domain: 'binary_sensor' },
+        { key: 'cloud_status',                   domain: 'binary_sensor' },
+        { key: 'force_mode',                     domain: 'select'        },
+        { key: 'user_work_mode',                 domain: 'select'        },
+        { key: 'set_charge_power',               domain: 'number'        },
+        { key: 'set_discharge_power',            domain: 'number'        },
+      ];
+
+      const suggestBox = prefix
+        ? `
+          <div class="ed-suggest-box">
+            <div class="ed-suggest-head">
+              <span>Prefix: <span class="ed-suggest-prefix">${prefix}</span></span>
+              <button class="ed-copy-all-btn" id="copyAllBtn">📋 Alle kopieren</button>
+            </div>
+            <div class="ed-suggest-list" id="suggestList">
+              ${SUGGEST_DEFS.map(d => {
+                const id = `${d.domain}.${prefix}_${d.key}`;
+                return `<div class="ed-suggest-row" data-id="${id}">
+                  <span class="ed-suggest-lbl">${d.key}</span>
+                  <span class="ed-suggest-id">${id}</span>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>`
+        : `<div class="ed-no-prefix">
+            Gib deinen <strong>Gerätenamen</strong> ein —<br>
+            z.B. <code>marstek_venus_1</code><br>
+            dann erscheinen hier alle Entity-IDs zum Kopieren.
+          </div>`;
+
+      // ── Entity-Picker Rows ────────────────────────────────────────────────
+      // Nur .hass / .value / .includeDomains werden NACH dem Rendern per JS
+      // gesetzt — innerHTML unterstützt keine Lit-Property-Bindings.
       const entityRows = ENTITY_DEFS.map(def => `
         <div class="ed-row">
           <div class="ed-label">
@@ -1772,12 +1781,13 @@
       `).join('');
 
       const toggles = [
-        { key: 'show_controls',    label: 'Steuerbuttons anzeigen',  desc: 'Lade/Entlade/Automatik-Buttons' },
-        { key: 'show_energy_stats',label: 'Energie-Statistiken',      desc: 'Tages- und Gesamtenergiewerte' },
-        { key: 'show_health',      label: 'Batterie-Gesundheit',      desc: 'Temperatur, Zellspannung, Effizienz' },
-        { key: 'show_ac',          label: 'AC-Leistung anzeigen',     desc: 'Balkendiagramm der AC-Leistung' },
+        { key: 'show_controls',     label: 'Steuerbuttons',        desc: 'Laden / Entladen / Automatik' },
+        { key: 'show_energy_stats', label: 'Energie-Statistiken',  desc: 'Tages- und Gesamtenergiewerte' },
+        { key: 'show_health',       label: 'Batterie-Gesundheit',  desc: 'Temperatur, Zellspannung, Balance' },
+        { key: 'show_ac',           label: 'AC-Leistung',          desc: 'Balkendiagramm der Netzleistung' },
       ];
 
+      // ── Template ──────────────────────────────────────────────────────────
       this.shadowRoot.innerHTML = `
         <style>${EDITOR_CSS}</style>
         <div class="ed-wrap">
@@ -1786,34 +1796,31 @@
             <div class="ed-section-title">🔧 Allgemein</div>
             <div class="ed-row">
               <div class="ed-label">Kartenname</div>
-              <ha-textfield
-                label="Titel"
-                .value="${cfg.title || 'Marstek Venus'}"
-                data-field="title"
-              ></ha-textfield>
-            </div>
-            <div class="ed-row">
-              <div class="ed-label">Geräte-Prefix (für Auto-Erkennung)</div>
-              <ha-textfield
-                label="z.B. marstek_venus oder meine_batterie"
-                .value="${cfg.entity_prefix || ''}"
-                data-field="entity_prefix"
-              ></ha-textfield>
-              <div class="ed-hint">
-                Prefix aus deinen Entitäts-IDs — z.B. bei <code>sensor.marstek_venus_battery_soc</code>
-                wäre es <strong>marstek_venus</strong>
-              </div>
+              <ha-textfield label="Titel" .value="${cfg.title || 'Marstek Venus'}" data-field="title"></ha-textfield>
             </div>
           </div>
 
           <div class="ed-section">
-            <div class="ed-section-title">🔍 Auto-Erkennung</div>
-            <button class="ed-discover-btn" id="discoverBtn">
-              🔍 Entitäten automatisch erkennen
-            </button>
-            ${this._discoverMsg ? `
-              <div class="ed-result ${this._discoverType}">${this._discoverMsg}</div>
-            ` : ''}
+            <div class="ed-section-title">📋 Entity-ID Kopiervorlage</div>
+            <div class="ed-row">
+              <div class="ed-label">Gerätename (Prefix)</div>
+              <ha-textfield
+                label="z.B. marstek_venus_1"
+                .value="${prefix}"
+                data-field="entity_prefix"
+                id="prefixField"
+              ></ha-textfield>
+              <div class="ed-hint">
+                <strong>Wo finde ich meinen Prefix?</strong><br>
+                Einstellungen → Geräte &amp; Dienste → deine Integration → Gerät anklicken.<br>
+                Dann eine beliebige Entität öffnen und die ID ablesen.<br><br>
+                ⚠ <strong>marstek_venus_modbus</strong> verwendet <em>deutsche</em> Entity-Namen
+                (z.&nbsp;B. <code>…_batterie_ladezustand</code> statt <code>…_battery_soc</code>).
+                Die Vorschau unten zeigt englische Schlüssel als Orientierung — die genauen IDs
+                bitte aus HA kopieren.
+              </div>
+            </div>
+            ${suggestBox}
           </div>
 
           <div class="ed-section">
@@ -1829,10 +1836,7 @@
                   <div class="ed-toggle-name">${t.label}</div>
                   <div class="ed-toggle-desc">${t.desc}</div>
                 </div>
-                <ha-switch
-                  .checked="${cfg[t.key] !== false}"
-                  data-toggle="${t.key}"
-                ></ha-switch>
+                <ha-switch .checked="${cfg[t.key] !== false}" data-toggle="${t.key}"></ha-switch>
               </div>
             `).join('')}
           </div>
@@ -1840,13 +1844,20 @@
         </div>
       `;
 
-      // Auto-Discover Button
-      this.shadowRoot.getElementById('discoverBtn')?.addEventListener('click', () => {
-        this._autoDiscover();
-      });
+      // ── Prefix-Feld: sofort neu rendern beim Tippen ───────────────────────
+      const prefixField = this.shadowRoot.getElementById('prefixField');
+      if (prefixField) {
+        prefixField.addEventListener('input', (e) => {
+          this._config.entity_prefix = e.target.value;
+          // Nur die Kopiervorlage aktualisieren, nicht den ganzen Editor
+          this._updateSuggestBox(e.target.value);
+        });
+        prefixField.addEventListener('change', () => this._fire());
+      }
 
-      // Textfelder
+      // ── Titel-Feld ────────────────────────────────────────────────────────
       this.shadowRoot.querySelectorAll('ha-textfield[data-field]').forEach(el => {
+        if (el.dataset.field === 'entity_prefix') return; // oben behandelt
         el.addEventListener('change', (e) => {
           this._config[el.dataset.field] = e.target.value;
           this._fire();
@@ -1856,12 +1867,13 @@
         });
       });
 
-      // Entitäts-Picker — Eigenschaften als JS-Objekte setzen (nicht als HTML-Attribute)
+      // ── Alle-kopieren Button ──────────────────────────────────────────────
+      this._attachCopyAll();
+
+      // ── Entitäts-Picker ───────────────────────────────────────────────────
       this.shadowRoot.querySelectorAll('ha-entity-picker[data-key]').forEach(el => {
         const key    = el.dataset.key;
         const domain = el.dataset.domain;
-
-        // JS-Properties direkt auf dem Element setzen
         el.hass = this._hass;
         if (domain) el.includeDomains = [domain];
         el.value = (this._config.entities || {})[key] || '';
@@ -1875,16 +1887,86 @@
             delete this._config.entities[key];
           }
           this._fire();
-          // Karte direkt aktualisieren ohne Editor neu zu rendern
-          // (verhindert Verlust des Fokus beim Tippen)
         });
       });
 
-      // Toggles
+      // ── Toggles ───────────────────────────────────────────────────────────
       this.shadowRoot.querySelectorAll('ha-switch[data-toggle]').forEach(el => {
         el.addEventListener('change', (e) => {
           this._config[el.dataset.toggle] = e.target.checked;
           this._fire();
+        });
+      });
+    }
+
+    // ── Kopiervorlage live aktualisieren (ohne komplettes Re-Render) ─────────
+    _updateSuggestBox(prefix) {
+      const listEl = this.shadowRoot.getElementById('suggestList');
+      const boxEl  = this.shadowRoot.querySelector('.ed-suggest-box');
+      const noEl   = this.shadowRoot.querySelector('.ed-no-prefix');
+      const headEl = this.shadowRoot.querySelector('.ed-suggest-head .ed-suggest-prefix');
+
+      if (!prefix.trim()) {
+        if (boxEl)  boxEl.style.display  = 'none';
+        if (noEl)   noEl.style.display   = 'block';
+        return;
+      }
+
+      if (noEl)  noEl.style.display  = 'none';
+      if (boxEl) boxEl.style.display  = '';
+      if (headEl) headEl.textContent  = prefix;
+
+      if (listEl) {
+        const SUGGEST_KEYS = [
+          ['sensor','battery_soc'], ['sensor','battery_power'], ['sensor','battery_voltage'],
+          ['sensor','battery_total_energy'], ['sensor','internal_temperature'],
+          ['sensor','ac_power'], ['sensor','ac_offgrid_power'],
+          ['sensor','total_daily_charging_energy'], ['sensor','total_daily_discharging_energy'],
+          ['sensor','total_charging_energy'], ['sensor','total_discharging_energy'],
+          ['sensor','stored_energy'], ['sensor','battery_cycle_count_calc'],
+          ['sensor','round_trip_efficiency_total'],
+          ['sensor','max_cell_voltage'], ['sensor','min_cell_voltage'],
+          ['sensor','balance_status'], ['sensor','balance_last_measurement'],
+          ['sensor','balance_delta_avg'], ['sensor','balance_cell_delta_100'],
+          ['sensor','balance_trend'],
+          ['sensor','fault_status'], ['sensor','alarm_status'], ['sensor','inverter_state'],
+          ['binary_sensor','wifi_status'], ['binary_sensor','cloud_status'],
+          ['select','force_mode'], ['select','user_work_mode'],
+          ['number','set_charge_power'], ['number','set_discharge_power'],
+        ];
+        listEl.innerHTML = SUGGEST_KEYS.map(([domain, key]) => {
+          const id = `${domain}.${prefix.trim()}_${key}`;
+          return `<div class="ed-suggest-row" data-id="${id}">
+            <span class="ed-suggest-lbl">${key}</span>
+            <span class="ed-suggest-id">${id}</span>
+          </div>`;
+        }).join('');
+        this._attachCopyAll();
+      }
+    }
+
+    // ── "Alle kopieren"-Button verdrahten ─────────────────────────────────────
+    _attachCopyAll() {
+      const btn = this.shadowRoot.getElementById('copyAllBtn');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        const rows = this.shadowRoot.querySelectorAll('.ed-suggest-row[data-id]');
+        const text = Array.from(rows).map(r => {
+          const key = r.querySelector('.ed-suggest-lbl')?.textContent || '';
+          const id  = r.dataset.id || '';
+          return `  ${key}: ${id}`;
+        }).join('\n');
+        const yaml = `type: custom:marstek-venus-dashboard\ntitle: ${this._config.title || 'Marstek Venus'}\nentities:\n${text}`;
+        navigator.clipboard.writeText(yaml).then(() => {
+          btn.textContent = '✓ Kopiert!';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.textContent = '📋 Alle kopieren';
+            btn.classList.remove('copied');
+          }, 2000);
+        }).catch(() => {
+          btn.textContent = '✗ Fehler';
+          setTimeout(() => { btn.textContent = '📋 Alle kopieren'; }, 2000);
         });
       });
     }
