@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marstek Venus Dashboard – Vorschau</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #060d1a;
+      min-height: 100vh;
+      font-family: 'Roboto', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      gap: 32px;
+    }
+
+    h1 {
+      color: #00e5b3;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      opacity: 0.7;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 420px));
+      gap: 28px;
+      width: 100%;
+      max-width: 1300px;
+      justify-content: center;
+    }
+
+    .scenario-label {
+      color: #475569;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .scenario { display: flex; flex-direction: column; }
+
+    /* ───── Card Styles (kopiert aus dem Plugin) ───── */
+    .mv-card {
+      background: linear-gradient(160deg, #0b1629 0%, #111d38 45%, #0b1629 100%);
+      border-radius: 22px;
+      color: #e2e8f0;
+      font-family: 'Roboto', -apple-system, sans-serif;
+      overflow: hidden;
+      position: relative;
+      box-shadow:
+        0 2px 4px rgba(0,0,0,0.3),
+        0 8px 24px rgba(0,0,0,0.5),
+        0 24px 48px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+    .mv-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 200px;
+      background: radial-gradient(ellipse at 50% -20%, rgba(0,229,179,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .mv-card > * { position: relative; z-index: 1; }
+
+    /* Header */
+    .mv-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .mv-title-area { display: flex; align-items: center; gap: 12px; }
+    .mv-icon-box {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, #00e5b3 0%, #0096c7 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0,229,179,0.3);
+    }
+    .mv-title { font-size: 15px; font-weight: 600; color: #f1f5f9; letter-spacing: 0.2px; }
+    .mv-subtitle { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 1px; }
+    .mv-status-bar { display: flex; align-items: center; gap: 6px; }
+    .mv-pill {
+      display: flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 500;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); color: #64748b;
+    }
+    .mv-pill.on { color: #00e5b3; border-color: rgba(0,229,179,0.2); background: rgba(0,229,179,0.07); }
+    .mv-alarm-dot {
+      width: 9px; height: 9px; border-radius: 50%; background: #4b5563;
+    }
+    .mv-alarm-dot.ok { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.6); }
+    .mv-alarm-dot.fault {
+      background: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.8);
+      animation: mv-pulse 1s ease-in-out infinite;
+    }
+    @keyframes mv-pulse {
+      0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)}
+    }
+
+    /* SOC Section */
+    .mv-soc-section {
+      display: flex; align-items: center;
+      padding: 16px 20px 10px; gap: 16px;
+    }
+    .mv-gauge-wrap { position: relative; flex-shrink: 0; }
+    .mv-gauge-svg { width: 160px; height: 115px; display: block; }
+    .mv-gauge-fill {
+      transition: stroke-dasharray 1.4s cubic-bezier(0.4,0,0.2,1), stroke 0.6s ease;
+    }
+    .mv-power-panel { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .mv-power-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.8px; color: #475569; font-weight: 600; }
+    .mv-power-big { font-size: 30px; font-weight: 200; color: #f1f5f9; letter-spacing: -1px; line-height: 1; }
+    .mv-power-big .mv-unit { font-size: 13px; color: #64748b; font-weight: 400; letter-spacing: 0; }
+    .mv-direction-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 11px; border-radius: 20px; font-size: 11px; font-weight: 600;
+      width: fit-content;
+    }
+    .mv-direction-badge.charging { background: rgba(0,229,179,0.13); color: #00e5b3; border: 1px solid rgba(0,229,179,0.25); }
+    .mv-direction-badge.discharging { background: rgba(255,112,67,0.13); color: #ff7043; border: 1px solid rgba(255,112,67,0.25); }
+    .mv-direction-badge.standby { background: rgba(100,116,139,0.1); color: #64748b; border: 1px solid rgba(100,116,139,0.15); }
+    .mv-flow-track { height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; margin-top: 2px; }
+    .mv-flow-runner { height: 100%; width: 40%; border-radius: 2px; }
+    .mv-flow-runner.charging { background: linear-gradient(90deg,transparent,#00e5b3,transparent); animation: mv-flow-r 1.8s linear infinite; }
+    .mv-flow-runner.discharging { background: linear-gradient(90deg,transparent,#ff7043,transparent); animation: mv-flow-l 1.8s linear infinite; }
+    .mv-flow-runner.standby { background: rgba(100,116,139,0.2); width: 100%; }
+    @keyframes mv-flow-r { 0%{transform:translateX(-150%)} 100%{transform:translateX(350%)} }
+    @keyframes mv-flow-l { 0%{transform:translateX(350%)} 100%{transform:translateX(-150%)} }
+    .mv-inverter-state { font-size: 10px; color: #475569; }
+    .mv-inverter-state span { color: #94a3b8; }
+
+    /* Mode Row */
+    .mv-mode-row { display: flex; gap: 7px; flex-wrap: wrap; padding: 2px 20px 14px; }
+    .mv-mode-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 11px; border-radius: 20px; font-size: 10px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; border: 1px solid;
+    }
+    .mv-mode-badge.charge { background: rgba(0,229,179,0.09); color: #00e5b3; border-color: rgba(0,229,179,0.22); }
+    .mv-mode-badge.discharge { background: rgba(255,112,67,0.09); color: #ff7043; border-color: rgba(255,112,67,0.22); }
+    .mv-mode-badge.auto { background: rgba(129,140,248,0.09); color: #818cf8; border-color: rgba(129,140,248,0.22); }
+    .mv-mode-badge.neutral { background: rgba(100,116,139,0.09); color: #64748b; border-color: rgba(100,116,139,0.15); }
+
+    /* Sep */
+    .mv-sep { height: 1px; background: rgba(255,255,255,0.05); margin: 0 16px; }
+
+    /* Stats */
+    .mv-stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; padding: 14px; }
+    .mv-stat {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 13px; padding: 12px 8px; text-align: center;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .mv-stat:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
+    .mv-stat-ico { font-size: 16px; display: block; margin-bottom: 6px; }
+    .mv-stat-val { font-size: 16px; font-weight: 500; line-height: 1; margin-bottom: 4px; color: #f1f5f9; }
+    .mv-stat-lbl { font-size: 8px; text-transform: uppercase; letter-spacing: 0.8px; color: #475569; font-weight: 600; }
+    .mv-stat.s-charge .mv-stat-val { color: #00e5b3; }
+    .mv-stat.s-discharge .mv-stat-val { color: #ff7043; }
+    .mv-stat.s-stored .mv-stat-val { color: #818cf8; }
+    .mv-stat.s-cycle .mv-stat-val { color: #f59e0b; }
+
+    /* AC Bar */
+    .mv-ac-section { padding: 0 16px 14px; }
+    .mv-ac-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+    .mv-ac-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #475569; font-weight: 600; }
+    .mv-ac-val { font-size: 14px; font-weight: 500; color: #818cf8; }
+    .mv-ac-track { height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+    .mv-ac-bar { height: 100%; background: linear-gradient(90deg,#6366f1,#818cf8,#a78bfa); border-radius: 3px; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+
+    /* Details */
+    .mv-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 14px 14px; }
+    .mv-detail-card {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 13px; padding: 13px 12px;
+    }
+    .mv-dc-title { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #475569; font-weight: 700; margin-bottom: 10px; }
+    .mv-dr { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .mv-dr:last-child { border-bottom: none; }
+    .mv-dr-name { font-size: 10px; color: #64748b; }
+    .mv-dr-val { font-size: 11px; font-weight: 500; color: #cbd5e1; }
+    .mv-cell-indicator { display: flex; align-items: center; gap: 4px; margin-top: 8px; }
+    .mv-cell-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .mv-cell-txt { font-size: 10px; color: #64748b; }
+
+    /* Controls */
+    .mv-controls { display: flex; gap: 8px; padding: 0 14px 14px; }
+    .mv-ctrl-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+      padding: 11px 6px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04); color: #64748b; font-size: 10px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+      cursor: pointer; transition: all 0.22s; font-family: 'Roboto', sans-serif;
+    }
+    .mv-ctrl-btn:hover { background: rgba(255,255,255,0.09); color: #cbd5e1; transform: translateY(-2px); }
+    .mv-btn-ico { font-size: 18px; }
+    .mv-ctrl-btn.active-charge { background: rgba(0,229,179,0.13); color: #00e5b3; border-color: rgba(0,229,179,0.3); box-shadow: 0 0 16px rgba(0,229,179,0.15); }
+    .mv-ctrl-btn.active-discharge { background: rgba(255,112,67,0.13); color: #ff7043; border-color: rgba(255,112,67,0.3); box-shadow: 0 0 16px rgba(255,112,67,0.15); }
+    .mv-ctrl-btn.active-auto { background: rgba(129,140,248,0.13); color: #818cf8; border-color: rgba(129,140,248,0.3); box-shadow: 0 0 16px rgba(129,140,248,0.15); }
+
+    /* Footer */
+    .mv-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 20px; border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .mv-footer-time { font-size: 10px; color: #334155; }
+    .mv-footer-ver { font-size: 9px; color: rgba(255,255,255,0.1); }
+  </style>
+</head>
+<body>
+
+<h1>Marstek Venus Dashboard — Vorschau</h1>
+
+<div class="grid">
+
+  <!-- ═══ Szenario 1: Laden bei 72% ═══ -->
+  <div class="scenario">
+    <div class="scenario-label">🔋 Laden · 72% SOC</div>
+    <div class="mv-card">
+      <!-- Header -->
+      <div class="mv-header">
+        <div class="mv-title-area">
+          <div class="mv-icon-box">🔋</div>
+          <div>
+            <div class="mv-title">Marstek Venus E v3</div>
+            <div class="mv-subtitle">Energy Storage System</div>
+          </div>
+        </div>
+        <div class="mv-status-bar">
+          <div class="mv-pill on">📶 WLAN</div>
+          <div class="mv-alarm-dot ok"></div>
+        </div>
+      </div>
+      <!-- SOC Gauge -->
+      <div class="mv-soc-section">
+        <div class="mv-gauge-wrap">
+          <svg class="mv-gauge-svg" viewBox="0 0 160 115" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <filter id="glow1"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <circle cx="80" cy="76" r="60" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10" stroke-linecap="round" stroke-dasharray="282.74 376.99" transform="rotate(135,80,76)"/>
+            <circle cx="80" cy="76" r="60" fill="none" stroke="#22c55e" stroke-width="20" stroke-linecap="round" stroke-dasharray="203.57 376.99" transform="rotate(135,80,76)" opacity="0.1" style="filter:blur(5px)"/>
+            <circle cx="80" cy="76" r="60" fill="none" stroke="#22c55e" stroke-width="10" stroke-linecap="round" stroke-dasharray="203.57 376.99" transform="rotate(135,80,76)" class="mv-gauge-fill"/>
+            <!-- Dot at end of arc (72%) -->
+            <circle cx="126.5" cy="46.2" r="5" fill="#22c55e" opacity="0.9"/>
+            <text x="80" y="66" text-anchor="middle" fill="#f1f5f9" font-size="30" font-weight="300" font-family="Roboto,sans-serif" letter-spacing="-1">72</text>
+            <text x="96" y="66" text-anchor="start" fill="#64748b" font-size="12" font-family="Roboto,sans-serif">%</text>
+            <text x="80" y="86" text-anchor="middle" fill="#475569" font-size="8" font-family="Roboto,sans-serif" letter-spacing="2">LADEZUSTAND</text>
+          </svg>
+        </div>
+        <div class="mv-power-panel">
+          <div class="mv-power-label">Batterieleistung</div>
+          <div class="mv-power-big">2.150 <span class="mv-unit">W</span></div>
+          <div class="mv-direction-badge charging">↑ Laden</div>
+          <div class="mv-flow-track"><div class="mv-flow-runner charging"></div></div>
+          <div class="mv-inverter-state">Status: <span>Charging</span></div>
+        </div>
+      </div>
+      <!-- Mode badges -->
+      <div class="mv-mode-row">
+        <div class="mv-mode-badge charge">⚙ Laden erzwungen</div>
+      </div>
+      <div class="mv-sep"></div>
+      <!-- Stats -->
+      <div class="mv-stats-grid">
+        <div class="mv-stat s-charge"><span class="mv-stat-ico">↑</span><div class="mv-stat-val">8.4</div><div class="mv-stat-lbl">kWh Laden</div></div>
+        <div class="mv-stat s-discharge"><span class="mv-stat-ico">↓</span><div class="mv-stat-val">3.2</div><div class="mv-stat-lbl">kWh Entladen</div></div>
+        <div class="mv-stat s-stored"><span class="mv-stat-ico">🔋</span><div class="mv-stat-val">7.2</div><div class="mv-stat-lbl">kWh Gespeich.</div></div>
+        <div class="mv-stat s-cycle"><span class="mv-stat-ico">↺</span><div class="mv-stat-val">247</div><div class="mv-stat-lbl">Zyklen</div></div>
+      </div>
+      <div class="mv-sep"></div>
+      <!-- AC Bar -->
+      <div class="mv-ac-section" style="padding-top:13px">
+        <div class="mv-ac-head"><span class="mv-ac-label">⚡ AC-Leistung</span><span class="mv-ac-val">2.100 W</span></div>
+        <div class="mv-ac-track"><div class="mv-ac-bar" style="width:70%"></div></div>
+      </div>
+      <div class="mv-sep"></div>
+      <!-- Details -->
+      <div class="mv-details-grid">
+        <div class="mv-detail-card">
+          <div class="mv-dc-title">🔧 Batterie</div>
+          <div class="mv-dr"><span class="mv-dr-name">🌡 Temperatur</span><span class="mv-dr-val" style="color:#22c55e">28.3 °C</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">⚡ Spannung</span><span class="mv-dr-val">51.6 V</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">▲ Zelle max</span><span class="mv-dr-val">3.426 V</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">▼ Zelle min</span><span class="mv-dr-val">3.419 V</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">△ Balance</span><span class="mv-dr-val" style="color:#22c55e">7 mV</span></div>
+          <div class="mv-cell-indicator">
+            <div class="mv-cell-dot" style="background:#22c55e;box-shadow:0 0 5px #22c55e80"></div>
+            <span class="mv-cell-txt">Gut balanciert</span>
+          </div>
+        </div>
+        <div class="mv-detail-card">
+          <div class="mv-dc-title">📊 Energie</div>
+          <div class="mv-dr"><span class="mv-dr-name">↑ Gesamt geladen</span><span class="mv-dr-val" style="color:#00e5b3">1.24 MWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↓ Gesamt entladen</span><span class="mv-dr-val" style="color:#ff7043">0.98 MWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↑ Heute geladen</span><span class="mv-dr-val">8.40 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↓ Heute entladen</span><span class="mv-dr-val">3.20 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↺ Zyklen gesamt</span><span class="mv-dr-val" style="color:#f59e0b">247</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">📈 Wirkungsgrad</span><span class="mv-dr-val">94.2 %</span></div>
+        </div>
+      </div>
+      <div class="mv-sep"></div>
+      <!-- Controls -->
+      <div class="mv-controls">
+        <button class="mv-ctrl-btn active-charge"><span class="mv-btn-ico">⚡</span><span>Laden</span></button>
+        <button class="mv-ctrl-btn"><span class="mv-btn-ico">⬇</span><span>Entladen</span></button>
+        <button class="mv-ctrl-btn"><span class="mv-btn-ico">◎</span><span>Automatik</span></button>
+      </div>
+      <!-- Footer -->
+      <div class="mv-footer">
+        <span class="mv-footer-time">Aktualisiert: 14:32:07</span>
+        <span class="mv-footer-ver">Marstek Venus Dashboard v1.2.0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Szenario 2: Entladen bei 38% ═══ -->
+  <div class="scenario">
+    <div class="scenario-label">⬇ Entladen · 38% SOC</div>
+    <div class="mv-card">
+      <div class="mv-header">
+        <div class="mv-title-area">
+          <div class="mv-icon-box">🔋</div>
+          <div>
+            <div class="mv-title">Marstek Venus A</div>
+            <div class="mv-subtitle">Energy Storage System</div>
+          </div>
+        </div>
+        <div class="mv-status-bar">
+          <div class="mv-pill on">📶 WLAN</div>
+          <div class="mv-alarm-dot ok"></div>
+        </div>
+      </div>
+      <div class="mv-soc-section">
+        <div class="mv-gauge-wrap">
+          <svg class="mv-gauge-svg" viewBox="0 0 160 115" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="80" cy="76" r="60" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10" stroke-linecap="round" stroke-dasharray="282.74 376.99" transform="rotate(135,80,76)"/>
+            <circle cx="80" cy="76" r="60" fill="none" stroke="#f59e0b" stroke-width="20" stroke-linecap="round" stroke-dasharray="107.44 376.99" transform="rotate(135,80,76)" opacity="0.1" style="filter:blur(5px)"/>
+            <circle cx="80" cy="76" r="60" fill="none" stroke="#f59e0b" stroke-width="10" stroke-linecap="round" stroke-dasharray="107.44 376.99" transform="rotate(135,80,76)" class="mv-gauge-fill"/>
+            <circle cx="42.8" cy="50.3" r="5" fill="#f59e0b" opacity="0.9"/>
+            <text x="80" y="66" text-anchor="middle" fill="#f1f5f9" font-size="30" font-weight="300" font-family="Roboto,sans-serif" letter-spacing="-1">38</text>
+            <text x="96" y="66" text-anchor="start" fill="#64748b" font-size="12" font-family="Roboto,sans-serif">%</text>
+            <text x="80" y="86" text-anchor="middle" fill="#475569" font-size="8" font-family="Roboto,sans-serif" letter-spacing="2">LADEZUSTAND</text>
+          </svg>
+        </div>
+        <div class="mv-power-panel">
+          <div class="mv-power-label">Batterieleistung</div>
+          <div class="mv-power-big">1.500 <span class="mv-unit">W</span></div>
+          <div class="mv-direction-badge discharging">↓ Entladen</div>
+          <div class="mv-flow-track"><div class="mv-flow-runner discharging"></div></div>
+          <div class="mv-inverter-state">Status: <span>Discharging</span></div>
+        </div>
+      </div>
+      <div class="mv-mode-row">
+        <div class="mv-mode-badge auto">◎ Eigenverbrauch</div>
+      </div>
+      <div class="mv-sep"></div>
+      <div class="mv-stats-grid">
+        <div class="mv-stat s-charge"><span class="mv-stat-ico">↑</span><div class="mv-stat-val">2.1</div><div class="mv-stat-lbl">kWh Laden</div></div>
+        <div class="mv-stat s-discharge"><span class="mv-stat-ico">↓</span><div class="mv-stat-val">5.8</div><div class="mv-stat-lbl">kWh Entladen</div></div>
+        <div class="mv-stat s-stored"><span class="mv-stat-ico">🔋</span><div class="mv-stat-val">3.8</div><div class="mv-stat-lbl">kWh Gespeich.</div></div>
+        <div class="mv-stat s-cycle"><span class="mv-stat-ico">↺</span><div class="mv-stat-val">503</div><div class="mv-stat-lbl">Zyklen</div></div>
+      </div>
+      <div class="mv-sep"></div>
+      <div class="mv-ac-section" style="padding-top:13px">
+        <div class="mv-ac-head"><span class="mv-ac-label">⚡ AC-Leistung</span><span class="mv-ac-val">1.490 W</span></div>
+        <div class="mv-ac-track"><div class="mv-ac-bar" style="width:49.7%"></div></div>
+      </div>
+      <div class="mv-sep"></div>
+      <div class="mv-details-grid">
+        <div class="mv-detail-card">
+          <div class="mv-dc-title">🔧 Batterie</div>
+          <div class="mv-dr"><span class="mv-dr-name">🌡 Temperatur</span><span class="mv-dr-val" style="color:#22c55e">31.7 °C</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">⚡ Spannung</span><span class="mv-dr-val">49.8 V</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">▲ Zelle max</span><span class="mv-dr-val">3.314 V</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">▼ Zelle min</span><span class="mv-dr-val">3.296 V</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">△ Balance</span><span class="mv-dr-val" style="color:#f59e0b">18 mV</span></div>
+          <div class="mv-cell-indicator">
+            <div class="mv-cell-dot" style="background:#f59e0b;box-shadow:0 0 5px #f59e0b80"></div>
+            <span class="mv-cell-txt">Leichte Unbalance</span>
+          </div>
+        </div>
+        <div class="mv-detail-card">
+          <div class="mv-dc-title">📊 Energie</div>
+          <div class="mv-dr"><span class="mv-dr-name">↑ Gesamt geladen</span><span class="mv-dr-val" style="color:#00e5b3">2.51 MWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↓ Gesamt entladen</span><span class="mv-dr-val" style="color:#ff7043">2.33 MWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↑ Heute geladen</span><span class="mv-dr-val">2.10 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↓ Heute entladen</span><span class="mv-dr-val">5.80 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↺ Zyklen gesamt</span><span class="mv-dr-val" style="color:#f59e0b">503</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">📈 Wirkungsgrad</span><span class="mv-dr-val">92.8 %</span></div>
+        </div>
+      </div>
+      <div class="mv-sep"></div>
+      <div class="mv-controls">
+        <button class="mv-ctrl-btn"><span class="mv-btn-ico">⚡</span><span>Laden</span></button>
+        <button class="mv-ctrl-btn active-discharge"><span class="mv-btn-ico">⬇</span><span>Entladen</span></button>
+        <button class="mv-ctrl-btn"><span class="mv-btn-ico">◎</span><span>Automatik</span></button>
+      </div>
+      <div class="mv-footer">
+        <span class="mv-footer-time">Aktualisiert: 18:47:22</span>
+        <span class="mv-footer-ver">Marstek Venus Dashboard v1.2.0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Szenario 3: Alarm / 12% ═══ -->
+  <div class="scenario">
+    <div class="scenario-label">🔴 Kritisch · 12% SOC · Alarm</div>
+    <div class="mv-card">
+      <div class="mv-header">
+        <div class="mv-title-area">
+          <div class="mv-icon-box">🔋</div>
+          <div>
+            <div class="mv-title">Marstek Venus D</div>
+            <div class="mv-subtitle">Energy Storage System</div>
+          </div>
+        </div>
+        <div class="mv-status-bar">
+          <div class="mv-pill on">📶 WLAN</div>
+          <div class="mv-alarm-dot fault"></div>
+        </div>
+      </div>
+      <div class="mv-soc-section">
+        <div class="mv-gauge-wrap">
+          <svg class="mv-gauge-svg" viewBox="0 0 160 115" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="80" cy="76" r="60" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10" stroke-linecap="round" stroke-dasharray="282.74 376.99" transform="rotate(135,80,76)"/>
+            <circle cx="80" cy="76" r="60" fill="none" stroke="#ef4444" stroke-width="20" stroke-linecap="round" stroke-dasharray="33.93 376.99" transform="rotate(135,80,76)" opacity="0.15" style="filter:blur(5px)"/>
+            <circle cx="80" cy="76" r="60" fill="none" stroke="#ef4444" stroke-width="10" stroke-linecap="round" stroke-dasharray="33.93 376.99" transform="rotate(135,80,76)" class="mv-gauge-fill"/>
+            <circle cx="27.4" cy="89.2" r="5" fill="#ef4444" opacity="0.9"/>
+            <text x="80" y="66" text-anchor="middle" fill="#f1f5f9" font-size="30" font-weight="300" font-family="Roboto,sans-serif" letter-spacing="-1">12</text>
+            <text x="96" y="66" text-anchor="start" fill="#64748b" font-size="12" font-family="Roboto,sans-serif">%</text>
+            <text x="80" y="86" text-anchor="middle" fill="#475569" font-size="8" font-family="Roboto,sans-serif" letter-spacing="2">LADEZUSTAND</text>
+          </svg>
+        </div>
+        <div class="mv-power-panel">
+          <div class="mv-power-label">Batterieleistung</div>
+          <div class="mv-power-big">420 <span class="mv-unit">W</span></div>
+          <div class="mv-direction-badge discharging">↓ Entladen</div>
+          <div class="mv-flow-track"><div class="mv-flow-runner discharging"></div></div>
+          <div class="mv-inverter-state">Status: <span style="color:#ef4444">Fault</span></div>
+        </div>
+      </div>
+      <div class="mv-mode-row">
+        <div class="mv-mode-badge discharge">⚙ Entladen erzwungen</div>
+      </div>
+      <div class="mv-sep"></div>
+      <div class="mv-stats-grid">
+        <div class="mv-stat s-charge"><span class="mv-stat-ico">↑</span><div class="mv-stat-val">0.3</div><div class="mv-stat-lbl">kWh Laden</div></div>
+        <div class="mv-stat s-discharge"><span class="mv-stat-ico">↓</span><div class="mv-stat-val">9.1</div><div class="mv-stat-lbl">kWh Entladen</div></div>
+        <div class="mv-stat s-stored"><span class="mv-stat-ico">🔋</span><div class="mv-stat-val">1.2</div><div class="mv-stat-lbl">kWh Gespeich.</div></div>
+        <div class="mv-stat s-cycle"><span class="mv-stat-ico">↺</span><div class="mv-stat-val">891</div><div class="mv-stat-lbl">Zyklen</div></div>
+      </div>
+      <div class="mv-sep"></div>
+      <div class="mv-ac-section" style="padding-top:13px">
+        <div class="mv-ac-head"><span class="mv-ac-label">⚡ AC-Leistung</span><span class="mv-ac-val">415 W</span></div>
+        <div class="mv-ac-track"><div class="mv-ac-bar" style="width:13.8%"></div></div>
+      </div>
+      <div class="mv-sep"></div>
+      <div class="mv-details-grid">
+        <div class="mv-detail-card">
+          <div class="mv-dc-title">🔧 Batterie</div>
+          <div class="mv-dr"><span class="mv-dr-name">🌡 Temperatur</span><span class="mv-dr-val" style="color:#f59e0b">43.1 °C</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">⚡ Spannung</span><span class="mv-dr-val">46.2 V</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">▲ Zelle max</span><span class="mv-dr-val">3.086 V</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">▼ Zelle min</span><span class="mv-dr-val">2.961 V</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">△ Balance</span><span class="mv-dr-val" style="color:#ef4444">125 mV</span></div>
+          <div class="mv-cell-indicator">
+            <div class="mv-cell-dot" style="background:#ef4444;box-shadow:0 0 5px #ef444480"></div>
+            <span class="mv-cell-txt">Hohe Unbalance!</span>
+          </div>
+        </div>
+        <div class="mv-detail-card">
+          <div class="mv-dc-title">📊 Energie</div>
+          <div class="mv-dr"><span class="mv-dr-name">↑ Gesamt geladen</span><span class="mv-dr-val" style="color:#00e5b3">4.47 MWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↓ Gesamt entladen</span><span class="mv-dr-val" style="color:#ff7043">4.21 MWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↑ Heute geladen</span><span class="mv-dr-val">0.30 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↓ Heute entladen</span><span class="mv-dr-val">9.10 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↺ Zyklen gesamt</span><span class="mv-dr-val" style="color:#f59e0b">891</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">📈 Wirkungsgrad</span><span class="mv-dr-val">89.4 %</span></div>
+        </div>
+      </div>
+      <div class="mv-sep"></div>
+      <div class="mv-controls">
+        <button class="mv-ctrl-btn"><span class="mv-btn-ico">⚡</span><span>Laden</span></button>
+        <button class="mv-ctrl-btn active-discharge"><span class="mv-btn-ico">⬇</span><span>Entladen</span></button>
+        <button class="mv-ctrl-btn"><span class="mv-btn-ico">◎</span><span>Automatik</span></button>
+      </div>
+      <div class="mv-footer">
+        <span class="mv-footer-time">Aktualisiert: 22:13:45</span>
+        <span class="mv-footer-ver">Marstek Venus Dashboard v1.2.0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Szenario 4: Bereitschaft / 95% voll ═══ -->
+  <div class="scenario">
+    <div class="scenario-label">◎ Bereitschaft · 95% voll</div>
+    <div class="mv-card">
+      <div class="mv-header">
+        <div class="mv-title-area">
+          <div class="mv-icon-box">🔋</div>
+          <div>
+            <div class="mv-title">Marstek Venus E v2</div>
+            <div class="mv-subtitle">Energy Storage System</div>
+          </div>
+        </div>
+        <div class="mv-status-bar">
+          <div class="mv-pill on">📶 WLAN</div>
+          <div class="mv-pill on">☁</div>
+          <div class="mv-alarm-dot ok"></div>
+        </div>
+      </div>
+      <div class="mv-soc-section">
+        <div class="mv-gauge-wrap">
+          <svg class="mv-gauge-svg" viewBox="0 0 160 115" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="80" cy="76" r="60" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10" stroke-linecap="round" stroke-dasharray="282.74 376.99" transform="rotate(135,80,76)"/>
+            <circle cx="80" cy="76" r="60" fill="none" stroke="#00e5b3" stroke-width="20" stroke-linecap="round" stroke-dasharray="268.60 376.99" transform="rotate(135,80,76)" opacity="0.12" style="filter:blur(5px)"/>
+            <circle cx="80" cy="76" r="60" fill="none" stroke="#00e5b3" stroke-width="10" stroke-linecap="round" stroke-dasharray="268.60 376.99" transform="rotate(135,80,76)" class="mv-gauge-fill"/>
+            <circle cx="120.3" cy="109.2" r="5" fill="#00e5b3" opacity="0.9"/>
+            <text x="80" y="66" text-anchor="middle" fill="#f1f5f9" font-size="30" font-weight="300" font-family="Roboto,sans-serif" letter-spacing="-1">95</text>
+            <text x="96" y="66" text-anchor="start" fill="#64748b" font-size="12" font-family="Roboto,sans-serif">%</text>
+            <text x="80" y="86" text-anchor="middle" fill="#475569" font-size="8" font-family="Roboto,sans-serif" letter-spacing="2">LADEZUSTAND</text>
+          </svg>
+        </div>
+        <div class="mv-power-panel">
+          <div class="mv-power-label">Batterieleistung</div>
+          <div class="mv-power-big">18 <span class="mv-unit">W</span></div>
+          <div class="mv-direction-badge standby">◎ Bereitschaft</div>
+          <div class="mv-flow-track"><div class="mv-flow-runner standby"></div></div>
+          <div class="mv-inverter-state">Status: <span>Balanced</span></div>
+        </div>
+      </div>
+      <div class="mv-mode-row">
+        <div class="mv-mode-badge auto">◎ Automatik</div>
+        <div class="mv-mode-badge neutral">◎ Eigenverbrauch</div>
+      </div>
+      <div class="mv-sep"></div>
+      <div class="mv-stats-grid">
+        <div class="mv-stat s-charge"><span class="mv-stat-ico">↑</span><div class="mv-stat-val">12.6</div><div class="mv-stat-lbl">kWh Laden</div></div>
+        <div class="mv-stat s-discharge"><span class="mv-stat-ico">↓</span><div class="mv-stat-val">0.4</div><div class="mv-stat-lbl">kWh Entladen</div></div>
+        <div class="mv-stat s-stored"><span class="mv-stat-ico">🔋</span><div class="mv-stat-val">9.5</div><div class="mv-stat-lbl">kWh Gespeich.</div></div>
+        <div class="mv-stat s-cycle"><span class="mv-stat-ico">↺</span><div class="mv-stat-val">142</div><div class="mv-stat-lbl">Zyklen</div></div>
+      </div>
+      <div class="mv-sep"></div>
+      <div class="mv-ac-section" style="padding-top:13px">
+        <div class="mv-ac-head"><span class="mv-ac-label">⚡ AC-Leistung</span><span class="mv-ac-val">22 W</span></div>
+        <div class="mv-ac-track"><div class="mv-ac-bar" style="width:0.7%"></div></div>
+      </div>
+      <div class="mv-sep"></div>
+      <div class="mv-details-grid">
+        <div class="mv-detail-card">
+          <div class="mv-dc-title">🔧 Batterie</div>
+          <div class="mv-dr"><span class="mv-dr-name">🌡 Temperatur</span><span class="mv-dr-val" style="color:#22c55e">24.8 °C</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">⚡ Spannung</span><span class="mv-dr-val">53.1 V</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">▲ Zelle max</span><span class="mv-dr-val">3.541 V</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">▼ Zelle min</span><span class="mv-dr-val">3.538 V</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">△ Balance</span><span class="mv-dr-val" style="color:#22c55e">3 mV</span></div>
+          <div class="mv-cell-indicator">
+            <div class="mv-cell-dot" style="background:#22c55e;box-shadow:0 0 5px #22c55e80"></div>
+            <span class="mv-cell-txt">Gut balanciert</span>
+          </div>
+        </div>
+        <div class="mv-detail-card">
+          <div class="mv-dc-title">📊 Energie</div>
+          <div class="mv-dr"><span class="mv-dr-name">↑ Gesamt geladen</span><span class="mv-dr-val" style="color:#00e5b3">710.4 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↓ Gesamt entladen</span><span class="mv-dr-val" style="color:#ff7043">669.2 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↑ Heute geladen</span><span class="mv-dr-val">12.60 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↓ Heute entladen</span><span class="mv-dr-val">0.40 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↺ Zyklen gesamt</span><span class="mv-dr-val" style="color:#f59e0b">142</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">📈 Wirkungsgrad</span><span class="mv-dr-val">96.1 %</span></div>
+        </div>
+      </div>
+      <div class="mv-sep"></div>
+      <div class="mv-controls">
+        <button class="mv-ctrl-btn"><span class="mv-btn-ico">⚡</span><span>Laden</span></button>
+        <button class="mv-ctrl-btn"><span class="mv-btn-ico">⬇</span><span>Entladen</span></button>
+        <button class="mv-ctrl-btn active-auto"><span class="mv-btn-ico">◎</span><span>Automatik</span></button>
+      </div>
+      <div class="mv-footer">
+        <span class="mv-footer-time">Aktualisiert: 11:08:33</span>
+        <span class="mv-footer-ver">Marstek Venus Dashboard v1.2.0</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /grid -->
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "Marstek Venus Dashboard",
+  "content_in_root": true,
+  "filename": "marstek-venus-dashboard.js",
+  "homeassistant": "2024.4.0",
+  "render_readme": true
+}
