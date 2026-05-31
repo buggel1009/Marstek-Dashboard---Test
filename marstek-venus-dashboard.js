@@ -2,55 +2,103 @@
  * Marstek Venus Dashboard Card
  * Premium Lovelace Dashboard für Marstek Venus Batteriespeicher
  * HACS Frontend Plugin
- * Version: 1.2.0
+ * Version: 1.3.0
  *
- * Unterstützt: Venus E v2/v3, Venus A, Venus D
- * Quelle: https://github.com/ffunes/marstek-venus-energy-manager
+ * Unterstützt beide Integrationen:
+ *   - ffunes/marstek-venus-energy-manager (Domain: marstek_venus_energy_manager)
+ *   - ViperRNMC/marstek_venus_modbus      (Domain: marstek_modbus)
+ * Geräte: Venus E v1/v2/v3, Venus A, Venus D
  */
 (function () {
   'use strict';
 
-  const VERSION = '1.2.0';
+  const VERSION = '1.3.0';
   const CARD_TAG = 'marstek-venus-dashboard';
   const EDITOR_TAG = 'marstek-venus-dashboard-editor';
 
-  // ─── Entitäts-Definitionen ────────────────────────────────────────────────
+  // ─── Entitäts-Definitionen (beide Integrationen) ─────────────────────────
   const ENTITY_DEFS = [
-    // Pflichtfelder
-    { key: 'battery_soc',                   domain: 'sensor',        label: 'Batterieladezustand (SOC)',       required: true  },
-    { key: 'battery_power',                  domain: 'sensor',        label: 'Batterieleistung (W)',            required: true  },
-    // Kern-Sensoren
-    { key: 'ac_power',                       domain: 'sensor',        label: 'AC-Leistung',                    required: false },
-    { key: 'internal_temperature',           domain: 'sensor',        label: 'Innentemperatur',                required: false },
-    { key: 'battery_voltage',                domain: 'sensor',        label: 'Batteriespannung',               required: false },
-    { key: 'max_cell_voltage',               domain: 'sensor',        label: 'Zelle max. Spannung',            required: false },
-    { key: 'min_cell_voltage',               domain: 'sensor',        label: 'Zelle min. Spannung',            required: false },
-    { key: 'inverter_state',                 domain: 'sensor',        label: 'Wechselrichterstatus',           required: false },
-    // Energie
-    { key: 'total_daily_charging_energy',    domain: 'sensor',        label: 'Tagesladung (kWh)',              required: false },
-    { key: 'total_daily_discharging_energy', domain: 'sensor',        label: 'Tagesentladung (kWh)',           required: false },
-    { key: 'total_charging_energy',          domain: 'sensor',        label: 'Gesamtladung (kWh)',             required: false },
-    { key: 'total_discharging_energy',       domain: 'sensor',        label: 'Gesamtentladung (kWh)',          required: false },
-    { key: 'stored_energy',                  domain: 'sensor',        label: 'Gespeicherte Energie (kWh)',     required: false },
-    { key: 'battery_cycle_count_calc',       domain: 'sensor',        label: 'Zyklenanzahl (berechnet)',       required: false },
-    { key: 'round_trip_efficiency_total',    domain: 'sensor',        label: 'Wirkungsgrad gesamt (%)',        required: false },
-    // Alarm
-    { key: 'fault_status',                   domain: 'sensor',        label: 'Fehlerstatus',                   required: false },
-    { key: 'alarm_status',                   domain: 'sensor',        label: 'Alarmstatus',                    required: false },
-    // Steuerung
-    { key: 'force_mode',                     domain: 'select',        label: 'Betriebsmodus (Force Mode)',     required: false },
-    { key: 'user_work_mode',                 domain: 'select',        label: 'Arbeitsmodus',                   required: false },
-    { key: 'set_charge_power',               domain: 'number',        label: 'Ladeleistung einstellen (W)',    required: false },
-    { key: 'set_discharge_power',            domain: 'number',        label: 'Entladeleistung einstellen (W)',  required: false },
-    // Konnektivität
-    { key: 'wifi_status',                    domain: 'binary_sensor', label: 'WLAN-Status',                    required: false },
-    { key: 'cloud_status',                   domain: 'binary_sensor', label: 'Cloud-Status',                   required: false },
-    // Multi-Batterie (Aggregat)
-    { key: 'system_soc',                     domain: 'sensor',        label: 'System SOC (Multi-Batterie)',    required: false },
-    { key: 'system_charge_power',            domain: 'sensor',        label: 'System Ladeleistung (Multi)',    required: false },
-    { key: 'system_discharge_power',         domain: 'sensor',        label: 'System Entladeleistung (Multi)', required: false },
-    { key: 'system_daily_charging_energy',   domain: 'sensor',        label: 'System Tagesladung (Multi)',     required: false },
-    { key: 'system_daily_discharging_energy',domain: 'sensor',        label: 'System Tagesentladung (Multi)',  required: false },
+    // ── Pflichtfelder ──────────────────────────────────────────────────────
+    { key: 'battery_soc',                     domain: 'sensor',        label: 'Batterieladezustand (SOC)',         required: true,  group: 'basis'    },
+    { key: 'battery_power',                    domain: 'sensor',        label: 'Batterieleistung (W)',              required: true,  group: 'basis'    },
+    // ── Batterie-Kern ──────────────────────────────────────────────────────
+    { key: 'battery_voltage',                  domain: 'sensor',        label: 'Batteriespannung (V)',              required: false, group: 'batterie' },
+    { key: 'battery_current',                  domain: 'sensor',        label: 'Batteriestrom (A)',                 required: false, group: 'batterie' },
+    { key: 'battery_total_energy',             domain: 'sensor',        label: 'Batterie Kapazität (kWh)',          required: false, group: 'batterie' },
+    { key: 'inverter_state',                   domain: 'sensor',        label: 'Wechselrichterstatus',              required: false, group: 'batterie' },
+    // ── Temperaturen ──────────────────────────────────────────────────────
+    { key: 'internal_temperature',             domain: 'sensor',        label: 'Innentemperatur (°C)',              required: false, group: 'temp'     },
+    { key: 'internal_mos1_temperature',        domain: 'sensor',        label: 'MOS1 Temperatur (°C)',              required: false, group: 'temp'     },
+    { key: 'internal_mos2_temperature',        domain: 'sensor',        label: 'MOS2 Temperatur (°C)',              required: false, group: 'temp'     },
+    { key: 'max_cell_temperature',             domain: 'sensor',        label: 'Zelle max. Temperatur (°C)',        required: false, group: 'temp'     },
+    { key: 'min_cell_temperature',             domain: 'sensor',        label: 'Zelle min. Temperatur (°C)',        required: false, group: 'temp'     },
+    // ── Zellspannungen ────────────────────────────────────────────────────
+    { key: 'max_cell_voltage',                 domain: 'sensor',        label: 'Zelle max. Spannung (V)',           required: false, group: 'zellen'   },
+    { key: 'min_cell_voltage',                 domain: 'sensor',        label: 'Zelle min. Spannung (V)',           required: false, group: 'zellen'   },
+    // ── AC-Netz ───────────────────────────────────────────────────────────
+    { key: 'ac_power',                         domain: 'sensor',        label: 'AC-Leistung (W)',                   required: false, group: 'ac'       },
+    { key: 'ac_voltage',                       domain: 'sensor',        label: 'AC-Spannung (V)',                   required: false, group: 'ac'       },
+    { key: 'ac_current',                       domain: 'sensor',        label: 'AC-Strom (A)',                      required: false, group: 'ac'       },
+    { key: 'ac_frequency',                     domain: 'sensor',        label: 'AC-Frequenz (Hz)',                  required: false, group: 'ac'       },
+    // ── Off-Grid ──────────────────────────────────────────────────────────
+    { key: 'ac_offgrid_power',                 domain: 'sensor',        label: 'Off-Grid AC-Leistung (W)',          required: false, group: 'offgrid'  },
+    { key: 'ac_offgrid_voltage',               domain: 'sensor',        label: 'Off-Grid AC-Spannung (V)',          required: false, group: 'offgrid'  },
+    { key: 'ac_offgrid_current',               domain: 'sensor',        label: 'Off-Grid AC-Strom (A)',             required: false, group: 'offgrid'  },
+    // ── Solar / MPPT (Venus A, D) ─────────────────────────────────────────
+    { key: 'mppt1_power',                      domain: 'sensor',        label: 'MPPT 1 Leistung (W)',               required: false, group: 'solar'    },
+    { key: 'mppt1_voltage',                    domain: 'sensor',        label: 'MPPT 1 Spannung (V)',               required: false, group: 'solar'    },
+    { key: 'mppt1_current',                    domain: 'sensor',        label: 'MPPT 1 Strom (A)',                  required: false, group: 'solar'    },
+    { key: 'mppt2_power',                      domain: 'sensor',        label: 'MPPT 2 Leistung (W)',               required: false, group: 'solar'    },
+    { key: 'mppt2_voltage',                    domain: 'sensor',        label: 'MPPT 2 Spannung (V)',               required: false, group: 'solar'    },
+    { key: 'mppt2_current',                    domain: 'sensor',        label: 'MPPT 2 Strom (A)',                  required: false, group: 'solar'    },
+    { key: 'mppt3_power',                      domain: 'sensor',        label: 'MPPT 3 Leistung (W)',               required: false, group: 'solar'    },
+    { key: 'mppt3_voltage',                    domain: 'sensor',        label: 'MPPT 3 Spannung (V)',               required: false, group: 'solar'    },
+    { key: 'mppt3_current',                    domain: 'sensor',        label: 'MPPT 3 Strom (A)',                  required: false, group: 'solar'    },
+    { key: 'mppt4_power',                      domain: 'sensor',        label: 'MPPT 4 Leistung (W)',               required: false, group: 'solar'    },
+    { key: 'mppt4_voltage',                    domain: 'sensor',        label: 'MPPT 4 Spannung (V)',               required: false, group: 'solar'    },
+    { key: 'mppt4_current',                    domain: 'sensor',        label: 'MPPT 4 Strom (A)',                  required: false, group: 'solar'    },
+    // ── Multi-Pack SOC (Venus A — bis 6 Einheiten) ───────────────────────
+    { key: 'battery_soc_1',                    domain: 'sensor',        label: 'Pack 1 SOC (%)',                    required: false, group: 'packs'    },
+    { key: 'battery_soc_2',                    domain: 'sensor',        label: 'Pack 2 SOC (%)',                    required: false, group: 'packs'    },
+    { key: 'battery_soc_3',                    domain: 'sensor',        label: 'Pack 3 SOC (%)',                    required: false, group: 'packs'    },
+    { key: 'battery_soc_4',                    domain: 'sensor',        label: 'Pack 4 SOC (%)',                    required: false, group: 'packs'    },
+    { key: 'battery_soc_5',                    domain: 'sensor',        label: 'Pack 5 SOC (%)',                    required: false, group: 'packs'    },
+    { key: 'battery_soc_6',                    domain: 'sensor',        label: 'Pack 6 SOC (%)',                    required: false, group: 'packs'    },
+    // ── Energie (täglich) ─────────────────────────────────────────────────
+    { key: 'total_daily_charging_energy',      domain: 'sensor',        label: 'Tagesladung (kWh)',                 required: false, group: 'energie'  },
+    { key: 'total_daily_discharging_energy',   domain: 'sensor',        label: 'Tagesentladung (kWh)',              required: false, group: 'energie'  },
+    // ── Energie (monatlich) — marstek_modbus ──────────────────────────────
+    { key: 'total_monthly_charging_energy',    domain: 'sensor',        label: 'Monatsladung (kWh)',                required: false, group: 'energie'  },
+    { key: 'total_monthly_discharging_energy', domain: 'sensor',        label: 'Monatsentladung (kWh)',             required: false, group: 'energie'  },
+    // ── Energie (gesamt) ──────────────────────────────────────────────────
+    { key: 'total_charging_energy',            domain: 'sensor',        label: 'Gesamtladung (kWh)',                required: false, group: 'energie'  },
+    { key: 'total_discharging_energy',         domain: 'sensor',        label: 'Gesamtentladung (kWh)',             required: false, group: 'energie'  },
+    { key: 'stored_energy',                    domain: 'sensor',        label: 'Gespeicherte Energie (kWh)',        required: false, group: 'energie'  },
+    // ── Effizienz & Zyklen ────────────────────────────────────────────────
+    { key: 'battery_cycle_count_calc',         domain: 'sensor',        label: 'Zyklenanzahl (berechnet)',          required: false, group: 'effizienz'},
+    { key: 'battery_cycle_count',              domain: 'sensor',        label: 'Zyklenanzahl (Hardware-Zähler)',    required: false, group: 'effizienz'},
+    { key: 'round_trip_efficiency_total',      domain: 'sensor',        label: 'Wirkungsgrad gesamt (%)',           required: false, group: 'effizienz'},
+    { key: 'round_trip_efficiency_monthly',    domain: 'sensor',        label: 'Wirkungsgrad monatlich (%)',        required: false, group: 'effizienz'},
+    { key: 'conversion_efficiency',            domain: 'sensor',        label: 'Umwandlungseffizienz (%)',          required: false, group: 'effizienz'},
+    // ── Alarm ─────────────────────────────────────────────────────────────
+    { key: 'fault_status',                     domain: 'sensor',        label: 'Fehlerstatus',                      required: false, group: 'alarm'    },
+    { key: 'alarm_status',                     domain: 'sensor',        label: 'Alarmstatus',                       required: false, group: 'alarm'    },
+    // ── Konnektivität ─────────────────────────────────────────────────────
+    { key: 'wifi_status',                      domain: 'binary_sensor', label: 'WLAN-Status',                       required: false, group: 'netz'     },
+    { key: 'cloud_status',                     domain: 'binary_sensor', label: 'Cloud-Status',                      required: false, group: 'netz'     },
+    { key: 'wifi_signal_strength',             domain: 'sensor',        label: 'WLAN-Signalstärke (dBm)',           required: false, group: 'netz'     },
+    // ── Steuerung ─────────────────────────────────────────────────────────
+    { key: 'force_mode',                       domain: 'select',        label: 'Betriebsmodus (Force Mode)',        required: false, group: 'steuerung'},
+    { key: 'user_work_mode',                   domain: 'select',        label: 'Arbeitsmodus',                      required: false, group: 'steuerung'},
+    { key: 'set_charge_power',                 domain: 'number',        label: 'Ladeleistung einstellen (W)',       required: false, group: 'steuerung'},
+    { key: 'set_discharge_power',              domain: 'number',        label: 'Entladeleistung einstellen (W)',    required: false, group: 'steuerung'},
+    { key: 'charge_to_soc',                    domain: 'number',        label: 'Laden bis SOC (%)',                 required: false, group: 'steuerung'},
+    // ── Multi-Batterie Aggregat (ffunes-Integration) ───────────────────────
+    { key: 'system_soc',                       domain: 'sensor',        label: 'System SOC (Multi-Batterie)',       required: false, group: 'multi'    },
+    { key: 'system_charge_power',              domain: 'sensor',        label: 'System Ladeleistung (Multi)',       required: false, group: 'multi'    },
+    { key: 'system_discharge_power',           domain: 'sensor',        label: 'System Entladeleistung (Multi)',    required: false, group: 'multi'    },
+    { key: 'system_daily_charging_energy',     domain: 'sensor',        label: 'System Tagesladung (Multi)',        required: false, group: 'multi'    },
+    { key: 'system_daily_discharging_energy',  domain: 'sensor',        label: 'System Tagesentladung (Multi)',     required: false, group: 'multi'    },
   ];
 
   // ─── Force-Mode Optionen & Mapping ───────────────────────────────────────
@@ -673,6 +721,70 @@
     .mv-footer-time { font-size: 10px; color: #334155; }
     .mv-footer-ver  { font-size: 9px; color: rgba(255,255,255,0.1); }
 
+    /* ── Solar / MPPT Sektion ── */
+    .mv-solar-section { padding: 13px 16px 14px; }
+
+    .mv-solar-head {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+    }
+    .mv-solar-label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+      color: #f59e0b; font-weight: 700; display: flex; align-items: center; gap: 5px;
+    }
+    .mv-solar-total { font-size: 14px; font-weight: 600; color: #f59e0b; }
+
+    .mv-solar-track { height: 4px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+    .mv-solar-bar {
+      height: 100%; background: linear-gradient(90deg, #f59e0b, #fbbf24, #fde68a);
+      border-radius: 3px; transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .mv-mppt-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
+    @media (max-width: 380px) { .mv-mppt-grid { grid-template-columns: repeat(2,1fr); } }
+
+    .mv-mppt-card {
+      background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.12);
+      border-radius: 10px; padding: 9px 8px; text-align: center;
+    }
+    .mv-mppt-name { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #78716c; font-weight: 700; margin-bottom: 5px; }
+    .mv-mppt-power { font-size: 14px; font-weight: 500; color: #f59e0b; line-height: 1; margin-bottom: 3px; }
+    .mv-mppt-detail { font-size: 9px; color: #57534e; }
+
+    /* ── Multi-Pack SOC ── */
+    .mv-packs-section { padding: 0 16px 14px; }
+    .mv-packs-title {
+      font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px;
+      color: #475569; font-weight: 700; margin-bottom: 10px;
+    }
+    .mv-pack-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 7px;
+    }
+    .mv-pack-row:last-child { margin-bottom: 0; }
+    .mv-pack-label { font-size: 10px; color: #64748b; width: 40px; flex-shrink: 0; }
+    .mv-pack-track { flex: 1; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+    .mv-pack-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+    .mv-pack-pct { font-size: 10px; font-weight: 500; color: #94a3b8; width: 32px; text-align: right; flex-shrink: 0; }
+
+    /* ── AC-Details Erweiterung ── */
+    .mv-ac-details {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 6px; margin-top: 8px;
+    }
+    .mv-ac-detail-item {
+      background: rgba(129,140,248,0.06); border: 1px solid rgba(129,140,248,0.1);
+      border-radius: 8px; padding: 7px 6px; text-align: center;
+    }
+    .mv-ac-detail-val { font-size: 12px; font-weight: 500; color: #818cf8; }
+    .mv-ac-detail-lbl { font-size: 8px; text-transform: uppercase; letter-spacing: 0.8px; color: #475569; margin-top: 2px; }
+
+    /* ── Off-Grid Sektion ── */
+    .mv-offgrid-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: rgba(251,191,36,0.05); border-top: 1px solid rgba(251,191,36,0.1);
+    }
+    .mv-offgrid-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #78716c; font-weight: 600; }
+    .mv-offgrid-val { font-size: 13px; font-weight: 500; color: #fbbf24; }
+
     /* ── Nicht konfiguriert / Unavailable ── */
     .mv-setup-hint {
       display: flex;
@@ -961,6 +1073,38 @@
       const wifiState     = this._state('wifi_status');
       const cloudState    = this._state('cloud_status');
 
+      // ── Neue Sensoren (marstek_modbus) ────────────────────────
+      const batteryCurrent    = this._num('battery_current');
+      const acVoltage         = this._num('ac_voltage');
+      const acCurrent         = this._num('ac_current');
+      const acFrequency       = this._num('ac_frequency');
+      const acOffgridPower    = this._num('ac_offgrid_power');
+      const acOffgridVoltage  = this._num('ac_offgrid_voltage');
+      const acOffgridCurrent  = this._num('ac_offgrid_current');
+      const mos1Temp          = this._num('internal_mos1_temperature');
+      const mos2Temp          = this._num('internal_mos2_temperature');
+      const maxCellTemp       = this._num('max_cell_temperature');
+      const minCellTemp       = this._num('min_cell_temperature');
+      const wifiDbm           = this._num('wifi_signal_strength');
+      const monthlyCharge     = this._num('total_monthly_charging_energy');
+      const monthlyDisc       = this._num('total_monthly_discharging_energy');
+      const effMonthly        = this._num('round_trip_efficiency_monthly');
+      const effConversion     = this._num('conversion_efficiency');
+      const cyclesHw          = this._num('battery_cycle_count');
+
+      // MPPT Solar
+      const mppt = [1,2,3,4].map(i => ({
+        power:   this._num(`mppt${i}_power`),
+        voltage: this._num(`mppt${i}_voltage`),
+        current: this._num(`mppt${i}_current`),
+      }));
+      const hasSolar      = mppt.some(m => m.power !== null);
+      const totalSolar    = hasSolar ? mppt.reduce((s, m) => s + (m.power || 0), 0) : null;
+
+      // Multi-Pack SOC
+      const packSocs = [1,2,3,4,5,6].map(i => this._num(`battery_soc_${i}`)).filter(v => v !== null);
+      const hasMultiPack  = packSocs.length > 0;
+
       // ── Berechnete Werte ───────────────────────────────────────
       const dir = this._direction(power);
       const alarm = this._alarmStatus();
@@ -1098,6 +1242,27 @@
           </div>
           <div class="mv-sep"></div>` : ''}
 
+          <!-- SOLAR / MPPT -->
+          ${hasSolar ? `
+          <div class="mv-solar-section">
+            <div class="mv-solar-head">
+              <span class="mv-solar-label">☀ Solar MPPT</span>
+              <span class="mv-solar-total">${formatPower(totalSolar)}</span>
+            </div>
+            <div class="mv-solar-track">
+              <div class="mv-solar-bar" style="width:${Math.min(100,(totalSolar/5000)*100).toFixed(1)}%"></div>
+            </div>
+            <div class="mv-mppt-grid">
+              ${mppt.map((m,i) => m.power !== null ? `
+                <div class="mv-mppt-card">
+                  <div class="mv-mppt-name">MPPT ${i+1}</div>
+                  <div class="mv-mppt-power">${formatPower(m.power)}</div>
+                  <div class="mv-mppt-detail">${m.voltage !== null ? m.voltage.toFixed(0)+'V' : ''} ${m.current !== null ? m.current.toFixed(1)+'A' : ''}</div>
+                </div>` : '').join('')}
+            </div>
+          </div>
+          <div class="mv-sep"></div>` : ''}
+
           <!-- AC-LEISTUNG -->
           ${cfg.show_ac && acPower !== null ? `
           <div class="mv-ac-section" style="padding-top:13px;">
@@ -1108,6 +1273,32 @@
             <div class="mv-ac-track">
               <div class="mv-ac-bar" style="width:${acPct.toFixed(1)}%"></div>
             </div>
+            ${(acVoltage !== null || acCurrent !== null || acFrequency !== null) ? `
+            <div class="mv-ac-details">
+              ${acVoltage !== null ? `<div class="mv-ac-detail-item"><div class="mv-ac-detail-val">${acVoltage.toFixed(1)} V</div><div class="mv-ac-detail-lbl">Spannung</div></div>` : ''}
+              ${acCurrent !== null ? `<div class="mv-ac-detail-item"><div class="mv-ac-detail-val">${acCurrent.toFixed(2)} A</div><div class="mv-ac-detail-lbl">Strom</div></div>` : ''}
+              ${acFrequency !== null ? `<div class="mv-ac-detail-item"><div class="mv-ac-detail-val">${acFrequency.toFixed(1)} Hz</div><div class="mv-ac-detail-lbl">Frequenz</div></div>` : ''}
+            </div>` : ''}
+          </div>
+          ${acOffgridPower !== null ? `
+          <div class="mv-offgrid-row">
+            <span class="mv-offgrid-label">🔌 Off-Grid</span>
+            <span class="mv-offgrid-val">${formatPower(acOffgridPower)}${acOffgridVoltage !== null ? ' · '+acOffgridVoltage.toFixed(0)+'V' : ''}${acOffgridCurrent !== null ? ' · '+acOffgridCurrent.toFixed(1)+'A' : ''}</span>
+          </div>` : ''}
+          <div class="mv-sep"></div>` : ''}
+
+          <!-- MULTI-PACK SOC -->
+          ${hasMultiPack ? `
+          <div class="mv-packs-section" style="padding-top:13px;">
+            <div class="mv-packs-title">🔋 Batterie-Packs</div>
+            ${packSocs.map((s,i) => `
+              <div class="mv-pack-row">
+                <span class="mv-pack-label">Pack ${i+1}</span>
+                <div class="mv-pack-track">
+                  <div class="mv-pack-fill" style="width:${s}%;background:${socColor(s)}"></div>
+                </div>
+                <span class="mv-pack-pct">${Math.round(s)} %</span>
+              </div>`).join('')}
           </div>
           <div class="mv-sep"></div>` : ''}
 
@@ -1116,17 +1307,38 @@
           <div class="mv-details-grid">
 
             <!-- Batterie-Gesundheit -->
+            <!-- Batterie-Gesundheit -->
             <div class="mv-detail-card">
               <div class="mv-dc-title">🔧 Batterie</div>
               ${temp !== null ? `
                 <div class="mv-dr">
-                  <span class="mv-dr-name">🌡 Temperatur</span>
+                  <span class="mv-dr-name">🌡 Innentemp.</span>
                   <span class="mv-dr-val" style="color:${tempColor(temp)}">${temp.toFixed(1)} °C</span>
+                </div>` : ''}
+              ${mos1Temp !== null ? `
+                <div class="mv-dr">
+                  <span class="mv-dr-name">🌡 MOS1</span>
+                  <span class="mv-dr-val" style="color:${tempColor(mos1Temp)}">${mos1Temp.toFixed(1)} °C</span>
+                </div>` : ''}
+              ${mos2Temp !== null ? `
+                <div class="mv-dr">
+                  <span class="mv-dr-name">🌡 MOS2</span>
+                  <span class="mv-dr-val" style="color:${tempColor(mos2Temp)}">${mos2Temp.toFixed(1)} °C</span>
+                </div>` : ''}
+              ${maxCellTemp !== null ? `
+                <div class="mv-dr">
+                  <span class="mv-dr-name">🔥 Zelle max T</span>
+                  <span class="mv-dr-val" style="color:${tempColor(maxCellTemp)}">${maxCellTemp.toFixed(1)} °C</span>
+                </div>` : ''}
+              ${minCellTemp !== null ? `
+                <div class="mv-dr">
+                  <span class="mv-dr-name">❄ Zelle min T</span>
+                  <span class="mv-dr-val">${minCellTemp.toFixed(1)} °C</span>
                 </div>` : ''}
               ${voltage !== null ? `
                 <div class="mv-dr">
                   <span class="mv-dr-name">⚡ Spannung</span>
-                  <span class="mv-dr-val">${voltage.toFixed(1)} V</span>
+                  <span class="mv-dr-val">${voltage.toFixed(1)} V${batteryCurrent !== null ? ' · '+batteryCurrent.toFixed(1)+' A' : ''}</span>
                 </div>` : ''}
               ${maxCell !== null ? `
                 <div class="mv-dr">
@@ -1147,10 +1359,10 @@
                   <div class="mv-cell-dot" style="background:${cellColor};box-shadow:0 0 5px ${cellColor}80;"></div>
                   <span class="mv-cell-txt">${cellDelta < 50 ? 'Gut balanciert' : cellDelta < 100 ? 'Leichte Unbalance' : 'Hohe Unbalance'}</span>
                 </div>` : ''}
-              ${efficiency !== null ? `
+              ${wifiDbm !== null ? `
                 <div class="mv-dr">
-                  <span class="mv-dr-name">📈 Effizienz</span>
-                  <span class="mv-dr-val" style="color:#00e5b3">${efficiency.toFixed(1)} %</span>
+                  <span class="mv-dr-name">📶 WLAN Signal</span>
+                  <span class="mv-dr-val" style="color:${wifiDbm > -60 ? '#22c55e' : wifiDbm > -75 ? '#f59e0b' : '#ef4444'}">${wifiDbm} dBm</span>
                 </div>` : ''}
             </div>
 
@@ -1167,6 +1379,16 @@
                   <span class="mv-dr-name">↓ Gesamt entladen</span>
                   <span class="mv-dr-val" style="color:#ff7043">${formatEnergy(totalDisc)}</span>
                 </div>` : ''}
+              ${monthlyCharge !== null ? `
+                <div class="mv-dr">
+                  <span class="mv-dr-name">↑ Monat geladen</span>
+                  <span class="mv-dr-val" style="color:#34d399">${monthlyCharge.toFixed(1)} kWh</span>
+                </div>` : ''}
+              ${monthlyDisc !== null ? `
+                <div class="mv-dr">
+                  <span class="mv-dr-name">↓ Monat entladen</span>
+                  <span class="mv-dr-val" style="color:#fb923c">${monthlyDisc.toFixed(1)} kWh</span>
+                </div>` : ''}
               ${dailyCharge !== null ? `
                 <div class="mv-dr">
                   <span class="mv-dr-name">↑ Heute geladen</span>
@@ -1177,15 +1399,25 @@
                   <span class="mv-dr-name">↓ Heute entladen</span>
                   <span class="mv-dr-val">${dailyDisc.toFixed(2)} kWh</span>
                 </div>` : ''}
-              ${cycles !== null ? `
+              ${(cycles ?? cyclesHw) !== null ? `
                 <div class="mv-dr">
-                  <span class="mv-dr-name">↺ Zyklen gesamt</span>
-                  <span class="mv-dr-val" style="color:#f59e0b">${Math.round(cycles)}</span>
+                  <span class="mv-dr-name">↺ Zyklen</span>
+                  <span class="mv-dr-val" style="color:#f59e0b">${Math.round(cycles ?? cyclesHw)}</span>
                 </div>` : ''}
               ${efficiency !== null ? `
                 <div class="mv-dr">
                   <span class="mv-dr-name">📈 Wirkungsgrad</span>
-                  <span class="mv-dr-val">${efficiency.toFixed(1)} %</span>
+                  <span class="mv-dr-val" style="color:#00e5b3">${efficiency.toFixed(1)} %</span>
+                </div>` : ''}
+              ${effMonthly !== null ? `
+                <div class="mv-dr">
+                  <span class="mv-dr-name">📈 Wirkungsgr. Monat</span>
+                  <span class="mv-dr-val">${effMonthly.toFixed(1)} %</span>
+                </div>` : ''}
+              ${effConversion !== null ? `
+                <div class="mv-dr">
+                  <span class="mv-dr-name">⚡ Umwandlung</span>
+                  <span class="mv-dr-val">${effConversion.toFixed(1)} %</span>
                 </div>` : ''}
             </div>
           </div>
@@ -1260,12 +1492,39 @@
 
     set hass(hass) {
       this._hass = hass;
+      // Bereits gerenderte Picker live aktualisieren (ohne komplettes Re-Render)
+      if (this.shadowRoot) {
+        this.shadowRoot.querySelectorAll('ha-entity-picker[data-key]').forEach(el => {
+          el.hass = hass;
+        });
+      }
     }
 
     setConfig(config) {
-      this._config = JSON.parse(JSON.stringify(config || {}));
-      if (!this._config.entities) this._config.entities = {};
-      this._render();
+      const newCfg = JSON.parse(JSON.stringify(config || {}));
+      if (!newCfg.entities) newCfg.entities = {};
+
+      // Nur komplett neu rendern wenn sich strukturell etwas geändert hat
+      // (nicht bei jeder Entitäts-Auswahl — das würde den Fokus zerstören)
+      const structuralKeys = ['title', 'entity_prefix', 'show_controls', 'show_health', 'show_energy_stats', 'show_ac'];
+      const needsFullRender = !this._config
+        || structuralKeys.some(k => this._config[k] !== newCfg[k])
+        || Object.keys(newCfg.entities).length !== Object.keys(this._config.entities || {}).length;
+
+      this._config = newCfg;
+
+      if (needsFullRender) {
+        this._render();
+      } else {
+        // Nur Picker-Werte aktualisieren ohne komplettes Re-Render
+        if (this.shadowRoot) {
+          this.shadowRoot.querySelectorAll('ha-entity-picker[data-key]').forEach(el => {
+            const key = el.dataset.key;
+            const newVal = (this._config.entities || {})[key] || '';
+            if (el.value !== newVal) el.value = newVal;
+          });
+        }
+      }
     }
 
     _fire() {
@@ -1279,56 +1538,97 @@
     _autoDiscover() {
       if (!this._hass) return;
       const states = this._hass.states;
-      const prefix = (this._config.entity_prefix || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      const allIds = Object.keys(states);
       let found = 0;
-      let total = 0;
 
+      // ── Schritt 1: Prefix aus bereits konfigurierten Entitäten ableiten ──
+      // (falls Nutzer eine Entität schon manuell gesetzt hat)
+      let inferredPrefix = '';
+      for (const def of ENTITY_DEFS) {
+        const id = this._config.entities[def.key];
+        if (!id) continue;
+        const domainDot = def.domain + '.';
+        if (!id.startsWith(domainDot)) continue;
+        const part = id.slice(domainDot.length);
+        const suffix = '_' + def.key;
+        if (part.endsWith(suffix)) {
+          inferredPrefix = part.slice(0, part.length - suffix.length);
+          break;
+        }
+      }
+
+      // Nutzer-Prefix bereinigen (Leerzeichen → _, Sonderzeichen entfernen)
+      const userPrefix = (this._config.entity_prefix || '')
+        .trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
+      // Effektiver Prefix: abgeleitet > Nutzer-Prefix
+      const effectivePrefix = inferredPrefix || userPrefix;
+
+      // ── Schritt 2: Für jede Entitätsdefinition suchen ────────────────────
       ENTITY_DEFS.forEach(def => {
-        total++;
         if (this._config.entities[def.key]) return; // schon gesetzt
 
-        // Suchstrategie: nach Entitäts-ID mit passendem Key suchen
-        for (const id of Object.keys(states)) {
-          const [dom, ...rest] = id.split('.');
-          if (dom !== def.domain) continue;
-          const lower = rest.join('.').toLowerCase();
+        const keySuffix = '_' + def.key;
+        const domainDot = def.domain + '.';
 
-          const keyVariants = [def.key, def.key.replace(/_/g, '')];
-          const matchesKey = keyVariants.some(k => lower.endsWith('_' + k) || lower === k || lower.includes('_' + k + '_'));
-
-          const matchesMarstek = lower.includes('marstek') || (prefix && lower.startsWith(prefix));
-
-          if (matchesKey && matchesMarstek) {
-            this._config.entities[def.key] = id;
+        // 2a. Exakter Treffer: {domain}.{prefix}_{key}
+        if (effectivePrefix) {
+          const exact = domainDot + effectivePrefix + keySuffix;
+          if (states[exact]) {
+            this._config.entities[def.key] = exact;
             found++;
-            break;
+            return;
           }
         }
-      });
 
-      // Fallback: Exakte Muster probieren
-      ENTITY_DEFS.forEach(def => {
-        if (this._config.entities[def.key]) return;
-        const candidates = [
-          `${def.domain}.marstek_venus_energy_manager_${def.key}`,
-          `${def.domain}.marstek_venus_${def.key}`,
-          `${def.domain}.marstek_${def.key}`,
+        // 2b. Bekannte Marstek-Muster (fester Domänenname)
+        const knownPatterns = [
+          domainDot + 'marstek_venus_energy_manager_' + def.key,
+          domainDot + 'marstek_venus_' + def.key,
+          domainDot + 'marstek_' + def.key,
         ];
-        if (prefix) {
-          candidates.unshift(`${def.domain}.${prefix}_${def.key}`);
-        }
-        for (const c of candidates) {
-          if (states[c]) {
-            this._config.entities[def.key] = c;
+        for (const p of knownPatterns) {
+          if (states[p]) {
+            this._config.entities[def.key] = p;
             found++;
-            break;
+            return;
           }
+        }
+
+        // 2c. Breit scannen: alle Entitäten der richtigen Domäne,
+        //     deren ID auf _{key} endet → ohne Prefix-Zwang
+        const matches = allIds.filter(id => {
+          if (!id.startsWith(domainDot)) return false;
+          const part = id.slice(domainDot.length);
+          // Muss auf _{key} enden
+          if (!part.endsWith(keySuffix)) return false;
+          // Falls Prefix angegeben: muss damit beginnen
+          if (effectivePrefix && !part.startsWith(effectivePrefix)) return false;
+          return true;
+        });
+
+        if (matches.length === 1) {
+          this._config.entities[def.key] = matches[0];
+          found++;
+        } else if (matches.length > 1) {
+          // Mehrere Treffer → bevorzuge Marstek/Venus-Entitäten
+          const preferred =
+            matches.find(m => m.includes('marstek')) ||
+            matches.find(m => m.includes('venus')) ||
+            matches[0];
+          this._config.entities[def.key] = preferred;
+          found++;
         }
       });
 
+      // ── Ergebnis-Meldung ─────────────────────────────────────────────────
+      const total = ENTITY_DEFS.length;
       if (found === 0) {
         this._discoverType = 'none';
-        this._discoverMsg = '⚠ Keine Marstek-Entitäten gefunden. Bitte prüfe den Geräte-Prefix und die Integration.';
+        const hint = effectivePrefix
+          ? `Prefix „${effectivePrefix}" geprüft, aber keine passenden Entitäten gefunden.`
+          : 'Tipp: Geräte-Prefix eingeben (z. B. „meine_batterie") und erneut versuchen.';
+        this._discoverMsg = `⚠ Keine Entitäten erkannt. ${hint}`;
       } else if (found < 5) {
         this._discoverType = 'partial';
         this._discoverMsg = `✓ ${found} Entität${found === 1 ? '' : 'en'} gefunden (von ${total} möglichen). Restliche bitte manuell zuweisen.`;
@@ -1345,6 +1645,9 @@
       const cfg = this._config;
       const ents = cfg.entities || {};
 
+      // Wichtig: .hass / .value / .includeDomains NICHT im Template setzen!
+      // innerHTML unterstützt keine Lit-Property-Bindings — Objekte würden als
+      // "[object Object]" ankommen. Sie werden NACH dem Rendern per JS gesetzt.
       const entityRows = ENTITY_DEFS.map(def => `
         <div class="ed-row">
           <div class="ed-label">
@@ -1353,10 +1656,8 @@
           </div>
           <ha-entity-picker
             allow-custom-entity
-            .hass="${this._hass}"
-            .value="${ents[def.key] || ''}"
-            .includeDomains="${[def.domain]}"
             data-key="${def.key}"
+            data-domain="${def.domain}"
           ></ha-entity-picker>
         </div>
       `).join('');
@@ -1446,17 +1747,27 @@
         });
       });
 
-      // Entitäts-Picker
+      // Entitäts-Picker — Eigenschaften als JS-Objekte setzen (nicht als HTML-Attribute)
       this.shadowRoot.querySelectorAll('ha-entity-picker[data-key]').forEach(el => {
+        const key    = el.dataset.key;
+        const domain = el.dataset.domain;
+
+        // JS-Properties direkt auf dem Element setzen
         el.hass = this._hass;
+        if (domain) el.includeDomains = [domain];
+        el.value = (this._config.entities || {})[key] || '';
+
         el.addEventListener('value-changed', (e) => {
-          const key = el.dataset.key;
+          if (!e.detail || e.detail.value === undefined) return;
+          if (!this._config.entities) this._config.entities = {};
           if (e.detail.value) {
             this._config.entities[key] = e.detail.value;
           } else {
             delete this._config.entities[key];
           }
           this._fire();
+          // Karte direkt aktualisieren ohne Editor neu zu rendern
+          // (verhindert Verlust des Fokus beim Tippen)
         });
       });
 

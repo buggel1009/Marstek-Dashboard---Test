@@ -211,6 +211,37 @@
     .mv-ctrl-btn.active-discharge { background: rgba(255,112,67,0.13); color: #ff7043; border-color: rgba(255,112,67,0.3); box-shadow: 0 0 16px rgba(255,112,67,0.15); }
     .mv-ctrl-btn.active-auto { background: rgba(129,140,248,0.13); color: #818cf8; border-color: rgba(129,140,248,0.3); box-shadow: 0 0 16px rgba(129,140,248,0.15); }
 
+    /* Solar MPPT */
+    .mv-solar-section { padding: 13px 16px 14px; }
+    .mv-solar-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .mv-solar-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #f59e0b; font-weight: 700; }
+    .mv-solar-total { font-size: 14px; font-weight: 600; color: #f59e0b; }
+    .mv-solar-track { height: 4px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+    .mv-solar-bar { height: 100%; background: linear-gradient(90deg,#f59e0b,#fbbf24,#fde68a); border-radius: 3px; }
+    .mv-mppt-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
+    .mv-mppt-card { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.12); border-radius: 10px; padding: 9px 8px; text-align: center; }
+    .mv-mppt-name { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: #78716c; font-weight: 700; margin-bottom: 5px; }
+    .mv-mppt-power { font-size: 13px; font-weight: 500; color: #f59e0b; line-height: 1; margin-bottom: 3px; }
+    .mv-mppt-detail { font-size: 9px; color: #57534e; }
+    /* Multi-Pack */
+    .mv-packs-section { padding: 0 16px 14px; }
+    .mv-packs-title { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #475569; font-weight: 700; margin-bottom: 10px; }
+    .mv-pack-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+    .mv-pack-row:last-child { margin-bottom: 0; }
+    .mv-pack-label { font-size: 10px; color: #64748b; width: 40px; flex-shrink: 0; }
+    .mv-pack-track { flex: 1; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+    .mv-pack-fill { height: 100%; border-radius: 3px; }
+    .mv-pack-pct { font-size: 10px; font-weight: 500; color: #94a3b8; width: 32px; text-align: right; flex-shrink: 0; }
+    /* AC Details */
+    .mv-ac-details { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-top: 8px; }
+    .mv-ac-detail-item { background: rgba(129,140,248,0.06); border: 1px solid rgba(129,140,248,0.1); border-radius: 8px; padding: 7px 6px; text-align: center; }
+    .mv-ac-detail-val { font-size: 12px; font-weight: 500; color: #818cf8; }
+    .mv-ac-detail-lbl { font-size: 8px; text-transform: uppercase; letter-spacing: 0.8px; color: #475569; margin-top: 2px; }
+    /* Off-Grid */
+    .mv-offgrid-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: rgba(251,191,36,0.05); border-top: 1px solid rgba(251,191,36,0.1); }
+    .mv-offgrid-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #78716c; font-weight: 600; }
+    .mv-offgrid-val { font-size: 13px; font-weight: 500; color: #fbbf24; }
+
     /* Footer */
     .mv-footer {
       display: flex; justify-content: space-between; align-items: center;
@@ -597,6 +628,189 @@
   </div>
 
 </div><!-- /grid -->
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- Neue Sektionen Demo (marstek_modbus) -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div style="color:#475569;font-size:10px;text-transform:uppercase;letter-spacing:2px;font-weight:600;text-align:center;margin:24px 0 16px;">
+  ☀ Neue Sektionen · Mars­tek Modbus (ViperRNMC)
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,420px));gap:28px;width:100%;max-width:1300px;justify-content:center;margin:0 auto;">
+
+  <!-- Venus A mit Solar MPPT + Multi-Pack + AC Details -->
+  <div class="scenario">
+    <div class="scenario-label">☀ Venus A · Solar MPPT · Multi-Pack</div>
+    <div class="mv-card">
+      <div class="mv-header">
+        <div class="mv-title-area">
+          <div class="mv-icon-box">🔋</div>
+          <div>
+            <div class="mv-title">Marstek Venus A</div>
+            <div class="mv-subtitle">Energy Storage System</div>
+          </div>
+        </div>
+        <div class="mv-status-bar">
+          <div class="mv-pill on">📶 WLAN</div>
+          <div class="mv-pill on">☁</div>
+          <div class="mv-alarm-dot ok"></div>
+        </div>
+      </div>
+
+      <!-- SOC Gauge -->
+      <div class="mv-soc-section">
+        <div class="mv-gauge-wrap">
+          <svg class="mv-gauge-svg" viewBox="0 0 160 115">
+            <circle cx="80" cy="76" r="60" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10" stroke-linecap="round" stroke-dasharray="282.74 376.99" transform="rotate(135,80,76)"/>
+            <circle cx="80" cy="76" r="60" fill="none" stroke="#22c55e" stroke-width="20" stroke-linecap="round" stroke-dasharray="226.19 376.99" transform="rotate(135,80,76)" opacity="0.1"/>
+            <circle cx="80" cy="76" r="60" fill="none" stroke="#22c55e" stroke-width="10" stroke-linecap="round" stroke-dasharray="226.19 376.99" transform="rotate(135,80,76)"/>
+            <text x="80" y="66" text-anchor="middle" fill="#f1f5f9" font-size="30" font-weight="300" font-family="Roboto,sans-serif" letter-spacing="-1">80</text>
+            <text x="96" y="66" text-anchor="start" fill="#64748b" font-size="12" font-family="Roboto,sans-serif">%</text>
+            <text x="80" y="86" text-anchor="middle" fill="#475569" font-size="8" font-family="Roboto,sans-serif" letter-spacing="2">LADEZUSTAND</text>
+          </svg>
+        </div>
+        <div class="mv-power-panel">
+          <div class="mv-power-label">Batterieleistung</div>
+          <div class="mv-power-big">3.200 <span class="mv-unit">W</span></div>
+          <div class="mv-direction-badge charging">↑ Laden</div>
+          <div class="mv-flow-track"><div class="mv-flow-runner charging"></div></div>
+          <div class="mv-inverter-state">Status: <span>Charging</span></div>
+        </div>
+      </div>
+      <div class="mv-mode-row">
+        <div class="mv-mode-badge auto">◎ Eigenverbrauch</div>
+      </div>
+      <div class="mv-sep"></div>
+
+      <!-- Stats -->
+      <div class="mv-stats-grid">
+        <div class="mv-stat s-charge"><span class="mv-stat-ico">↑</span><div class="mv-stat-val">14.2</div><div class="mv-stat-lbl">kWh Laden</div></div>
+        <div class="mv-stat s-discharge"><span class="mv-stat-ico">↓</span><div class="mv-stat-val">2.1</div><div class="mv-stat-lbl">kWh Entladen</div></div>
+        <div class="mv-stat s-stored"><span class="mv-stat-ico">🔋</span><div class="mv-stat-val">24.0</div><div class="mv-stat-lbl">kWh Gespeich.</div></div>
+        <div class="mv-stat s-cycle"><span class="mv-stat-ico">↺</span><div class="mv-stat-val">89</div><div class="mv-stat-lbl">Zyklen</div></div>
+      </div>
+      <div class="mv-sep"></div>
+
+      <!-- ☀ SOLAR MPPT SEKTION (NEU) -->
+      <div class="mv-solar-section">
+        <div class="mv-solar-head">
+          <span class="mv-solar-label">☀ Solar MPPT</span>
+          <span class="mv-solar-total">3.720 W</span>
+        </div>
+        <div class="mv-solar-track">
+          <div class="mv-solar-bar" style="width:74.4%"></div>
+        </div>
+        <div class="mv-mppt-grid">
+          <div class="mv-mppt-card">
+            <div class="mv-mppt-name">MPPT 1</div>
+            <div class="mv-mppt-power">1.050 W</div>
+            <div class="mv-mppt-detail">420V 2.5A</div>
+          </div>
+          <div class="mv-mppt-card">
+            <div class="mv-mppt-name">MPPT 2</div>
+            <div class="mv-mppt-power">980 W</div>
+            <div class="mv-mppt-detail">418V 2.3A</div>
+          </div>
+          <div class="mv-mppt-card">
+            <div class="mv-mppt-name">MPPT 3</div>
+            <div class="mv-mppt-power">1.090 W</div>
+            <div class="mv-mppt-detail">425V 2.6A</div>
+          </div>
+          <div class="mv-mppt-card">
+            <div class="mv-mppt-name">MPPT 4</div>
+            <div class="mv-mppt-power">600 W</div>
+            <div class="mv-mppt-detail">415V 1.4A</div>
+          </div>
+        </div>
+      </div>
+      <div class="mv-sep"></div>
+
+      <!-- AC mit Details (NEU) -->
+      <div class="mv-ac-section" style="padding-top:13px">
+        <div class="mv-ac-head">
+          <span class="mv-ac-label">⚡ AC-Leistung</span>
+          <span class="mv-ac-val">2.850 W</span>
+        </div>
+        <div class="mv-ac-track"><div class="mv-ac-bar" style="width:95%"></div></div>
+        <div class="mv-ac-details">
+          <div class="mv-ac-detail-item"><div class="mv-ac-detail-val">230.4 V</div><div class="mv-ac-detail-lbl">Spannung</div></div>
+          <div class="mv-ac-detail-item"><div class="mv-ac-detail-val">12.37 A</div><div class="mv-ac-detail-lbl">Strom</div></div>
+          <div class="mv-ac-detail-item"><div class="mv-ac-detail-val">50.0 Hz</div><div class="mv-ac-detail-lbl">Frequenz</div></div>
+        </div>
+      </div>
+      <div class="mv-offgrid-row">
+        <span class="mv-offgrid-label">🔌 Off-Grid</span>
+        <span class="mv-offgrid-val">870 W · 230V · 3.8A</span>
+      </div>
+      <div class="mv-sep"></div>
+
+      <!-- MULTI-PACK SOC (NEU) -->
+      <div class="mv-packs-section" style="padding-top:13px">
+        <div class="mv-packs-title">🔋 Batterie-Packs</div>
+        <div class="mv-pack-row">
+          <span class="mv-pack-label">Pack 1</span>
+          <div class="mv-pack-track"><div class="mv-pack-fill" style="width:82%;background:#22c55e"></div></div>
+          <span class="mv-pack-pct">82 %</span>
+        </div>
+        <div class="mv-pack-row">
+          <span class="mv-pack-label">Pack 2</span>
+          <div class="mv-pack-track"><div class="mv-pack-fill" style="width:79%;background:#22c55e"></div></div>
+          <span class="mv-pack-pct">79 %</span>
+        </div>
+        <div class="mv-pack-row">
+          <span class="mv-pack-label">Pack 3</span>
+          <div class="mv-pack-track"><div class="mv-pack-fill" style="width:80%;background:#22c55e"></div></div>
+          <span class="mv-pack-pct">80 %</span>
+        </div>
+      </div>
+      <div class="mv-sep"></div>
+
+      <!-- Details mit MOS Temps + Monatsdaten (NEU) -->
+      <div class="mv-details-grid">
+        <div class="mv-detail-card">
+          <div class="mv-dc-title">🔧 Batterie</div>
+          <div class="mv-dr"><span class="mv-dr-name">🌡 Innentemp.</span><span class="mv-dr-val" style="color:#22c55e">26.1 °C</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">🌡 MOS1</span><span class="mv-dr-val" style="color:#22c55e">31.2 °C</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">🌡 MOS2</span><span class="mv-dr-val" style="color:#22c55e">30.8 °C</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">🔥 Zelle max T</span><span class="mv-dr-val" style="color:#22c55e">28.4 °C</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">❄ Zelle min T</span><span class="mv-dr-val">24.1 °C</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">⚡ Spannung</span><span class="mv-dr-val">52.4 V · 61.1 A</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">△ Balance</span><span class="mv-dr-val" style="color:#22c55e">5 mV</span></div>
+          <div class="mv-cell-indicator">
+            <div class="mv-cell-dot" style="background:#22c55e;box-shadow:0 0 5px #22c55e80"></div>
+            <span class="mv-cell-txt">Gut balanciert</span>
+          </div>
+          <div class="mv-dr" style="margin-top:6px"><span class="mv-dr-name">📶 WLAN Signal</span><span class="mv-dr-val" style="color:#22c55e">-52 dBm</span></div>
+        </div>
+        <div class="mv-detail-card">
+          <div class="mv-dc-title">📊 Energie</div>
+          <div class="mv-dr"><span class="mv-dr-name">↑ Gesamt geladen</span><span class="mv-dr-val" style="color:#00e5b3">447.3 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↓ Gesamt entladen</span><span class="mv-dr-val" style="color:#ff7043">421.1 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↑ Monat geladen</span><span class="mv-dr-val" style="color:#34d399">87.4 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↓ Monat entladen</span><span class="mv-dr-val" style="color:#fb923c">72.1 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↑ Heute geladen</span><span class="mv-dr-val">14.20 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↓ Heute entladen</span><span class="mv-dr-val">2.10 kWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↺ Zyklen</span><span class="mv-dr-val" style="color:#f59e0b">89</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">📈 Wirkungsgrad</span><span class="mv-dr-val" style="color:#00e5b3">96.8 %</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">📈 Wirkungsgr. Monat</span><span class="mv-dr-val">95.2 %</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">⚡ Umwandlung</span><span class="mv-dr-val">97.1 %</span></div>
+        </div>
+      </div>
+      <div class="mv-sep"></div>
+
+      <div class="mv-controls">
+        <button class="mv-ctrl-btn"><span class="mv-btn-ico">⚡</span><span>Laden</span></button>
+        <button class="mv-ctrl-btn"><span class="mv-btn-ico">⬇</span><span>Entladen</span></button>
+        <button class="mv-ctrl-btn active-auto"><span class="mv-btn-ico">◎</span><span>Automatik</span></button>
+      </div>
+      <div class="mv-footer">
+        <span class="mv-footer-time">Aktualisiert: 13:21:44</span>
+        <span class="mv-footer-ver">Marstek Venus Dashboard v1.3.0</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /new sections grid -->
 
 </body>
 </html>
