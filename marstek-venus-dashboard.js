@@ -80,6 +80,12 @@
     { key: 'round_trip_efficiency_total',      domain: 'sensor',        label: 'Wirkungsgrad gesamt (%)',           required: false, group: 'effizienz'},
     { key: 'round_trip_efficiency_monthly',    domain: 'sensor',        label: 'Wirkungsgrad monatlich (%)',        required: false, group: 'effizienz'},
     { key: 'conversion_efficiency',            domain: 'sensor',        label: 'Umwandlungseffizienz (%)',          required: false, group: 'effizienz'},
+    // ── Zell-Balance (ffunes: balance_sensors.py) ────────────────────────
+    { key: 'balance_status',                   domain: 'sensor',        label: 'Balance - Status',                  required: false, group: 'balance'  },
+    { key: 'balance_last_measurement',         domain: 'sensor',        label: 'Balance - Letzte Messung (mV)',     required: false, group: 'balance'  },
+    { key: 'balance_delta_avg',                domain: 'sensor',        label: 'Balance - Delta-Durchschnitt (mV)',required: false, group: 'balance'  },
+    { key: 'balance_cell_delta_100',           domain: 'sensor',        label: 'Balance - Zellendelta bei 100%',    required: false, group: 'balance'  },
+    { key: 'balance_trend',                    domain: 'sensor',        label: 'Balance - Trend',                   required: false, group: 'balance'  },
     // ── Alarm ─────────────────────────────────────────────────────────────
     { key: 'fault_status',                     domain: 'sensor',        label: 'Fehlerstatus',                      required: false, group: 'alarm'    },
     { key: 'alarm_status',                     domain: 'sensor',        label: 'Alarmstatus',                       required: false, group: 'alarm'    },
@@ -88,11 +94,16 @@
     { key: 'cloud_status',                     domain: 'binary_sensor', label: 'Cloud-Status',                      required: false, group: 'netz'     },
     { key: 'wifi_signal_strength',             domain: 'sensor',        label: 'WLAN-Signalstärke (dBm)',           required: false, group: 'netz'     },
     // ── Steuerung ─────────────────────────────────────────────────────────
-    { key: 'force_mode',                       domain: 'select',        label: 'Betriebsmodus (Force Mode)',        required: false, group: 'steuerung'},
+    { key: 'force_mode',                       domain: 'select',        label: 'Betriebsmodus erzwingen',           required: false, group: 'steuerung'},
     { key: 'user_work_mode',                   domain: 'select',        label: 'Arbeitsmodus',                      required: false, group: 'steuerung'},
     { key: 'set_charge_power',                 domain: 'number',        label: 'Ladeleistung einstellen (W)',       required: false, group: 'steuerung'},
     { key: 'set_discharge_power',              domain: 'number',        label: 'Entladeleistung einstellen (W)',    required: false, group: 'steuerung'},
     { key: 'charge_to_soc',                    domain: 'number',        label: 'Laden bis SOC (%)',                 required: false, group: 'steuerung'},
+    { key: 'charging_cutoff_capacity',         domain: 'number',        label: 'Lade-SOC-Grenzwert (%)',            required: false, group: 'steuerung'},
+    { key: 'discharging_cutoff_capacity',      domain: 'number',        label: 'Entlade-SOC-Grenzwert (%)',         required: false, group: 'steuerung'},
+    { key: 'active_balance_mode',              domain: 'switch',        label: 'Aktiver Zellabgleich',              required: false, group: 'steuerung'},
+    { key: 'battery_allow_charge',             domain: 'switch',        label: 'Laden Erlauben',                    required: false, group: 'steuerung'},
+    { key: 'battery_allow_discharge',          domain: 'switch',        label: 'Entladen Erlauben',                 required: false, group: 'steuerung'},
     // ── Multi-Batterie Aggregat (ffunes-Integration) ───────────────────────
     { key: 'system_soc',                       domain: 'sensor',        label: 'System SOC (Multi-Batterie)',       required: false, group: 'multi'    },
     { key: 'system_charge_power',              domain: 'sensor',        label: 'System Ladeleistung (Multi)',       required: false, group: 'multi'    },
@@ -777,6 +788,43 @@
     .mv-ac-detail-val { font-size: 12px; font-weight: 500; color: #818cf8; }
     .mv-ac-detail-lbl { font-size: 8px; text-transform: uppercase; letter-spacing: 0.8px; color: #475569; margin-top: 2px; }
 
+    /* ── Zell-Balance Sektion ── */
+    .mv-balance-section { padding: 0 16px 14px; }
+
+    .mv-balance-head {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+    }
+    .mv-balance-title {
+      font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px;
+      color: #475569; font-weight: 700;
+    }
+    .mv-balance-chip {
+      padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .mv-balance-chip.green  { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
+    .mv-balance-chip.yellow { background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.25); }
+    .mv-balance-chip.orange { background: rgba(249,115,22,0.12); color: #f97316; border: 1px solid rgba(249,115,22,0.25); }
+    .mv-balance-chip.red    { background: rgba(239,68,68,0.12);  color: #ef4444; border: 1px solid rgba(239,68,68,0.25);  }
+    .mv-balance-chip.grey   { background: rgba(100,116,139,0.1); color: #64748b; border: 1px solid rgba(100,116,139,0.2); }
+
+    .mv-balance-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 6px;
+    }
+    .mv-balance-item {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px; padding: 9px 8px; text-align: center;
+    }
+    .mv-balance-val { font-size: 14px; font-weight: 500; color: #e2e8f0; line-height: 1; margin-bottom: 4px; }
+    .mv-balance-lbl { font-size: 8px; text-transform: uppercase; letter-spacing: 0.8px; color: #475569; font-weight: 600; }
+
+    .mv-balance-trend {
+      display: flex; align-items: center; gap: 6px; margin-top: 8px;
+      padding: 6px 10px; background: rgba(255,255,255,0.03);
+      border-radius: 8px; font-size: 11px; color: #64748b;
+    }
+    .mv-balance-trend-icon { font-size: 14px; }
+
     /* ── Off-Grid Sektion ── */
     .mv-offgrid-row {
       display: flex; align-items: center; justify-content: space-between;
@@ -1092,6 +1140,14 @@
       const effConversion     = this._num('conversion_efficiency');
       const cyclesHw          = this._num('battery_cycle_count');
 
+      // Balance-Sensoren (ffunes: balance_sensors.py)
+      const balanceStatus    = this._state('balance_status');
+      const balanceLast      = this._num('balance_last_measurement');
+      const balanceDeltaAvg  = this._num('balance_delta_avg');
+      const balanceDelta100  = this._num('balance_cell_delta_100');
+      const balanceTrend     = this._state('balance_trend');
+      const hasBalance       = balanceStatus !== null || balanceLast !== null || balanceDeltaAvg !== null;
+
       // MPPT Solar
       const mppt = [1,2,3,4].map(i => ({
         power:   this._num(`mppt${i}_power`),
@@ -1301,6 +1357,59 @@
               </div>`).join('')}
           </div>
           <div class="mv-sep"></div>` : ''}
+
+          <!-- ZELL-BALANCE SEKTION -->
+          ${hasBalance ? (() => {
+            // Status-Chip Farbe & Label
+            const statusMap = {
+              'Balanciert': { cls: 'green',  icon: '●', label: 'Balanciert' },
+              'Geringe Unbalance': { cls: 'yellow', icon: '▲', label: 'Gering' },
+              'Moderate Unbalance': { cls: 'orange', icon: '▲', label: 'Moderat' },
+              'Hohe Unbalance': { cls: 'red',   icon: '⚠', label: 'Hoch!' },
+              'green':  { cls: 'green',  icon: '●', label: 'Balanciert' },
+              'yellow': { cls: 'yellow', icon: '▲', label: 'Gering' },
+              'orange': { cls: 'orange', icon: '▲', label: 'Moderat' },
+              'red':    { cls: 'red',   icon: '⚠', label: 'Hoch!' },
+            };
+            const st = statusMap[balanceStatus] || { cls: 'grey', icon: '◎', label: balanceStatus || '—' };
+            const trendMap = {
+              'Improving': '📉 Verbessert sich', 'Worsening': '📈 Verschlechtert sich',
+              'Stable': '➡ Stabil', 'Unknown': '? Unbekannt',
+              'Verbessert': '📉 Verbessert sich', 'Verschlechtert': '📈 Verschlechtert sich',
+              'Stabil': '➡ Stabil',
+            };
+            const trendLabel = trendMap[balanceTrend] || balanceTrend || '';
+            return `
+            <div class="mv-balance-section">
+              <div class="mv-balance-head">
+                <span class="mv-balance-title">⚡ Zell-Balance</span>
+                <span class="mv-balance-chip ${st.cls}">${st.icon} ${st.label}</span>
+              </div>
+              <div class="mv-balance-grid">
+                ${balanceLast !== null ? `
+                  <div class="mv-balance-item">
+                    <div class="mv-balance-val">${balanceLast.toFixed(0)} mV</div>
+                    <div class="mv-balance-lbl">Letzte Messung</div>
+                  </div>` : ''}
+                ${balanceDeltaAvg !== null ? `
+                  <div class="mv-balance-item">
+                    <div class="mv-balance-val">${balanceDeltaAvg.toFixed(0)} mV</div>
+                    <div class="mv-balance-lbl">Ø 4 Messungen</div>
+                  </div>` : ''}
+                ${balanceDelta100 !== null ? `
+                  <div class="mv-balance-item">
+                    <div class="mv-balance-val">${balanceDelta100.toFixed(0)} mV</div>
+                    <div class="mv-balance-lbl">Delta bei 100%</div>
+                  </div>` : ''}
+              </div>
+              ${trendLabel ? `
+                <div class="mv-balance-trend">
+                  <span class="mv-balance-trend-icon">${trendLabel.split(' ')[0]}</span>
+                  <span>${trendLabel.split(' ').slice(1).join(' ')}</span>
+                </div>` : ''}
+            </div>
+            <div class="mv-sep"></div>`;
+          })() : ''}
 
           <!-- DETAIL-KARTEN: Batterie + Energie -->
           ${cfg.show_health ? `

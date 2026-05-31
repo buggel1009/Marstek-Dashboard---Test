@@ -211,6 +211,21 @@
     .mv-ctrl-btn.active-discharge { background: rgba(255,112,67,0.13); color: #ff7043; border-color: rgba(255,112,67,0.3); box-shadow: 0 0 16px rgba(255,112,67,0.15); }
     .mv-ctrl-btn.active-auto { background: rgba(129,140,248,0.13); color: #818cf8; border-color: rgba(129,140,248,0.3); box-shadow: 0 0 16px rgba(129,140,248,0.15); }
 
+    /* Balance */
+    .mv-balance-section { padding: 0 16px 14px; }
+    .mv-balance-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .mv-balance-title { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #475569; font-weight: 700; }
+    .mv-balance-chip { padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .mv-balance-chip.green  { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
+    .mv-balance-chip.yellow { background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.25); }
+    .mv-balance-chip.orange { background: rgba(249,115,22,0.12); color: #f97316; border: 1px solid rgba(249,115,22,0.25); }
+    .mv-balance-chip.red    { background: rgba(239,68,68,0.12);  color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+    .mv-balance-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+    .mv-balance-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 9px 8px; text-align: center; }
+    .mv-balance-val { font-size: 14px; font-weight: 500; color: #e2e8f0; line-height: 1; margin-bottom: 4px; }
+    .mv-balance-lbl { font-size: 8px; text-transform: uppercase; letter-spacing: 0.8px; color: #475569; font-weight: 600; }
+    .mv-balance-trend { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding: 6px 10px; background: rgba(255,255,255,0.03); border-radius: 8px; font-size: 11px; color: #64748b; }
+
     /* Solar MPPT */
     .mv-solar-section { padding: 13px 16px 14px; }
     .mv-solar-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
@@ -313,6 +328,32 @@
         <div class="mv-stat s-cycle"><span class="mv-stat-ico">↺</span><div class="mv-stat-val">247</div><div class="mv-stat-lbl">Zyklen</div></div>
       </div>
       <div class="mv-sep"></div>
+      <!-- ⚡ ZELL-BALANCE (NEU) -->
+      <div class="mv-balance-section">
+        <div class="mv-balance-head">
+          <span class="mv-balance-title">⚡ Zell-Balance</span>
+          <span class="mv-balance-chip green">● Balanciert</span>
+        </div>
+        <div class="mv-balance-grid">
+          <div class="mv-balance-item">
+            <div class="mv-balance-val">7 mV</div>
+            <div class="mv-balance-lbl">Letzte Messung</div>
+          </div>
+          <div class="mv-balance-item">
+            <div class="mv-balance-val">9 mV</div>
+            <div class="mv-balance-lbl">Ø 4 Messungen</div>
+          </div>
+          <div class="mv-balance-item">
+            <div class="mv-balance-val">12 mV</div>
+            <div class="mv-balance-lbl">Delta bei 100%</div>
+          </div>
+        </div>
+        <div class="mv-balance-trend">
+          <span class="mv-balance-trend-icon">📉</span>
+          <span>Verbessert sich</span>
+        </div>
+      </div>
+      <div class="mv-sep"></div>
       <!-- AC Bar -->
       <div class="mv-ac-section" style="padding-top:13px">
         <div class="mv-ac-head"><span class="mv-ac-label">⚡ AC-Leistung</span><span class="mv-ac-val">2.100 W</span></div>
@@ -337,6 +378,8 @@
           <div class="mv-dc-title">📊 Energie</div>
           <div class="mv-dr"><span class="mv-dr-name">↑ Gesamt geladen</span><span class="mv-dr-val" style="color:#00e5b3">1.24 MWh</span></div>
           <div class="mv-dr"><span class="mv-dr-name">↓ Gesamt entladen</span><span class="mv-dr-val" style="color:#ff7043">0.98 MWh</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">↺ Zyklen</span><span class="mv-dr-val" style="color:#f59e0b">247</span></div>
+          <div class="mv-dr"><span class="mv-dr-name">📈 Wirkungsgrad</span><span class="mv-dr-val" style="color:#00e5b3">94.2 %</span></div>
           <div class="mv-dr"><span class="mv-dr-name">↑ Heute geladen</span><span class="mv-dr-val">8.40 kWh</span></div>
           <div class="mv-dr"><span class="mv-dr-name">↓ Heute entladen</span><span class="mv-dr-val">3.20 kWh</span></div>
           <div class="mv-dr"><span class="mv-dr-name">↺ Zyklen gesamt</span><span class="mv-dr-val" style="color:#f59e0b">247</span></div>

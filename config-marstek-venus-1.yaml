@@ -1,0 +1,60 @@
+# Marstek Venus Dashboard — Fertige Konfiguration
+# Gerät: "Marstek Venus 1" · Integration: Marstek Venus Energy Manager
+# Einfach in den Lovelace-Karten-Editor einfügen (YAML-Modus)
+
+type: custom:marstek-venus-dashboard
+title: Marstek Venus 1
+entity_prefix: marstek_venus_1
+show_controls: true
+show_energy_stats: true
+show_health: true
+show_ac: true
+
+entities:
+  # ── Pflichtfelder ──────────────────────────────────────
+  battery_soc:                     sensor.marstek_venus_1_battery_soc
+  battery_power:                   sensor.marstek_venus_1_battery_power
+
+  # ── Batterie ───────────────────────────────────────────
+  battery_voltage:                 sensor.marstek_venus_1_battery_voltage
+  battery_total_energy:            sensor.marstek_venus_1_battery_total_energy
+  inverter_state:                  sensor.marstek_venus_1_inverter_state
+
+  # ── Temperatur ─────────────────────────────────────────
+  internal_temperature:            sensor.marstek_venus_1_internal_temperature
+
+  # ── AC-Netz ────────────────────────────────────────────
+  ac_power:                        sensor.marstek_venus_1_ac_power
+  ac_offgrid_power:                sensor.marstek_venus_1_ac_offgrid_power
+
+  # ── Energie ────────────────────────────────────────────
+  total_daily_charging_energy:     sensor.marstek_venus_1_total_daily_charging_energy
+  total_daily_discharging_energy:  sensor.marstek_venus_1_total_daily_discharging_energy
+  total_charging_energy:           sensor.marstek_venus_1_total_charging_energy
+  total_discharging_energy:        sensor.marstek_venus_1_total_discharging_energy
+  stored_energy:                   sensor.marstek_venus_1_stored_energy
+
+  # ── Effizienz & Zyklen ─────────────────────────────────
+  battery_cycle_count_calc:        sensor.marstek_venus_1_battery_cycle_count_calc
+  round_trip_efficiency_total:     sensor.marstek_venus_1_round_trip_efficiency_total
+
+  # ── Zell-Balance ───────────────────────────────────────
+  balance_status:                  sensor.marstek_venus_1_balance_status
+  balance_last_measurement:        sensor.marstek_venus_1_balance_last_measurement
+  balance_delta_avg:               sensor.marstek_venus_1_balance_delta_avg
+  balance_cell_delta_100:          sensor.marstek_venus_1_balance_cell_delta_100
+  balance_trend:                   sensor.marstek_venus_1_balance_trend
+
+  # ── Zellspannungen ─────────────────────────────────────
+  max_cell_voltage:                sensor.marstek_venus_1_max_cell_voltage
+  min_cell_voltage:                sensor.marstek_venus_1_min_cell_voltage
+
+  # ── Alarm ──────────────────────────────────────────────
+  fault_status:                    sensor.marstek_venus_1_fault_status
+  alarm_status:                    sensor.marstek_venus_1_alarm_status
+
+  # ── Steuerung ──────────────────────────────────────────
+  force_mode:                      select.marstek_venus_1_force_mode
+  user_work_mode:                  select.marstek_venus_1_user_work_mode
+  set_charge_power:                number.marstek_venus_1_set_charge_power
+  set_discharge_power:             number.marstek_venus_1_set_discharge_power
