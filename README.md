@@ -46,7 +46,7 @@
 ## Installation via HACS
 
 1. **HACS** → *Frontend* → ⋮ → *Benutzerdefinierte Repositories*
-2. URL eintragen: `https://github.com/pauer/energy-management-dashboard`
+2. URL eintragen: `https://github.com/buggel1009/Energy-Managament-Dashboard`
 3. Kategorie: **Lovelace**
 4. Installieren → Home Assistant neu laden
 
