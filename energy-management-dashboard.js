@@ -33,7 +33,10 @@
     { key: 'max_cell_voltage',                 domain: 'sensor',        label: 'Zelle max. Spannung (V)',           required: false, group: 'zellen'   },
     { key: 'min_cell_voltage',                 domain: 'sensor',        label: 'Zelle min. Spannung (V)',           required: false, group: 'zellen'   },
     // ── AC-Netz ───────────────────────────────────────────────────────────
-    { key: 'ac_power',                         domain: 'sensor',        label: 'AC-Leistung (W)',                   required: false, group: 'ac'       },
+    // ── Hausverbrauch & Netz ──────────────────────────────────────────────
+    { key: 'home_consumption',                 domain: 'sensor',        label: 'Hausverbrauch gesamt (W)',          required: false, group: 'ac'       },
+    { key: 'grid_power',                       domain: 'sensor',        label: 'Netzleistung +Bezug/-Einspeisung', required: false, group: 'ac'       },
+    { key: 'ac_power',                         domain: 'sensor',        label: 'AC-Leistung Batterie (W)',          required: false, group: 'ac'       },
     { key: 'ac_voltage',                       domain: 'sensor',        label: 'AC-Spannung (V)',                   required: false, group: 'ac'       },
     { key: 'ac_current',                       domain: 'sensor',        label: 'AC-Strom (A)',                      required: false, group: 'ac'       },
     { key: 'ac_frequency',                     domain: 'sensor',        label: 'AC-Frequenz (Hz)',                  required: false, group: 'ac'       },
@@ -726,7 +729,6 @@
       const power   = rawPow !== null ? rawPow : (sysCP > sysDC ? sysCP : -sysDC);
       const dir     = this._direction(power);
 
-      const acPower    = this._num('ac_power');
       const temp       = this._num('internal_temperature');
       const mos1       = this._num('internal_mos1_temperature');
       const mos2       = this._num('internal_mos2_temperature');
@@ -757,9 +759,25 @@
       const balLast    = this._num('balance_last_measurement');
       const balAvg     = this._num('balance_delta_avg');
       const balTrend   = this._state('balance_trend');
-      const mppt       = [1,2,3,4].map(i => ({ power: this._num(`mppt${i}_power`), voltage: this._num(`mppt${i}_voltage`), current: this._num(`mppt${i}_current`) }));
-      const totalSolar = mppt.some(m => m.power !== null) ? mppt.reduce((s, m) => s + (m.power || 0), 0) : null;
+      const mppt        = [1,2,3,4].map(i => ({ power: this._num(`mppt${i}_power`), voltage: this._num(`mppt${i}_voltage`), current: this._num(`mppt${i}_current`) }));
+      const totalSolar  = mppt.some(m => m.power !== null) ? mppt.reduce((s, m) => s + (m.power || 0), 0) : null;
       const solarActive = totalSolar !== null && totalSolar > 20;
+
+      const acPower         = this._num('ac_power');
+      const homeConsumption = this._num('home_consumption');
+      const gridPower       = this._num('grid_power');
+      // Hausverbrauch: direkte Entität > Schätzung aus bekannten Werten
+      const homePower = homeConsumption !== null
+        ? homeConsumption
+        : (() => {
+            const solar = totalSolar || 0;
+            const bat   = power !== null ? Math.max(0, -power) : 0; // Entladung positiv
+            const grid  = gridPower !== null ? Math.max(0, gridPower) : 0;
+            const calc  = solar + bat + grid;
+            return calc > 10 ? calc : (acPower !== null ? acPower : null);
+          })();
+      const gridImport = gridPower !== null ? Math.max(0,  gridPower) : null;
+      const gridExport = gridPower !== null ? Math.max(0, -gridPower) : null;
 
       // ── Berechnungen ────────────────────────────────────────────────
       const alarm     = this._alarmStatus();
@@ -813,8 +831,9 @@
       // ── SVG Energiefluss (Vertical Prism Design) ──────────────────
       const uid = 'mv' + Math.random().toString(36).slice(2, 7);
 
-      const hasAC      = !!cfg.entities.ac_power;
-      const mpptActive = mppt.filter(m => m.power !== null);
+      const hasAC       = !!cfg.entities.ac_power || !!cfg.entities.home_consumption;
+      const hasGrid     = !!cfg.entities.grid_power;
+      const mpptActive  = mppt.filter(m => m.power !== null);
 
       // SOC-Ring (270°, r=28)
       const SR = 28;
@@ -828,10 +847,12 @@
           ? Math.max(minD, maxD - (Math.abs(p) / maxP) * (maxD - minD)).toFixed(1) : null;
 
       const solarDur = flowDur(totalSolar, 8000);
-      const homeDur  = flowDur(acPower ?? Math.abs(power ?? 0), 3500, 0.8, 2.8);
-      const gridDur  = '2.3';
+      // Hausverbrauch für Animationsgeschwindigkeit nutzen
+      const homePowerForAnim = homePower ?? acPower ?? Math.abs(power ?? 0);
+      const homeDur  = flowDur(homePowerForAnim, 5000, 0.6, 2.8);
+      const gridDur  = gridPower !== null ? flowDur(Math.abs(gridPower), 3000, 0.8, 2.5) ?? '2.3' : '2.3';
 
-      const nPts = (p, max = 4000) => p ? Math.max(2, Math.min(3, Math.ceil(Math.abs(p) / max * 3))) : 2;
+      const nPts = (p, max = 4000) => p ? Math.max(2, Math.min(4, Math.ceil(Math.abs(p) / max * 4))) : 2;
 
       const pts = (n, fill, pathId, dur) => {
         if (!dur) return '';
@@ -851,12 +872,27 @@
       const solarPath = `M 82,36 L 82,72 C 82,92 154,92 154,92`;
       const homePath  = `M 154,92 C 154,92 226,72 226,52 L 226,36`;
       const gridPath  = `M 154,110 L 154,155`;
-      const showGrid  = hasAC && acPower !== null;
 
+      // Hausverbrauch-Farbe: orange wenn hoch, lila wenn normal
       const homeColor  = dir === 'discharging' ? '#ff8c32' : '#a78bfa';
       const homeStroke = dir === 'discharging' ? `stroke="#ff8c32"` : `stroke="#a78bfa"`;
 
-      const svgHeight = mpptActive.length > 1 ? 220 : 195;
+      // Netzfarbe: rot = Bezug, grün = Einspeisung
+      const gridColor  = gridPower !== null
+        ? (gridPower > 20 ? '#f87171' : gridPower < -20 ? '#34d399' : '#3b82f6')
+        : '#3b82f6';
+      const gridLabel  = gridPower !== null
+        ? (gridPower > 20 ? `↓ ${formatPower(gridPower)}` : gridPower < -20 ? `↑ ${formatPower(-gridPower)}` : '◎ 0 W')
+        : null;
+
+      const showGrid   = hasGrid || (hasAC && solarActive);
+      // Netz-Partikelrichtung: umkehren bei Einspeisung
+      const gridExporting = gridPower !== null && gridPower < -20;
+      const gridPathAnim  = gridExporting
+        ? `M 154,155 L 154,110`   // Einspeisung: Haus→Netz
+        : `M 154,110 L 154,155`;  // Bezug: Netz→Batterie
+
+      const svgHeight = mpptActive.length > 1 ? 225 : (showGrid ? 200 : 185);
 
       const svg = `
 <svg viewBox="0 0 308 ${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
@@ -864,7 +900,7 @@
     <filter id="gw${uid}"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <path id="sp${uid}" d="${solarPath}"/>
     <path id="hp${uid}" d="${homePath}"/>
-    <path id="gp${uid}" d="${gridPath}"/>
+    <path id="gp${uid}" d="${gridPathAnim}"/>
   </defs>
 
   <!-- Ambiente Glow Batterie -->
@@ -876,17 +912,19 @@
     <use href="#sp${uid}" fill="none" stroke="#fbbf24" stroke-width="8" opacity="0.08" stroke-linecap="round"/>
     <use href="#sp${uid}" fill="none" stroke="#fbbf24" stroke-width="1.5" opacity="0.35" stroke-linecap="round"/>
   ` : ''}
-  <use href="#hp${uid}" fill="none" ${homeStroke} stroke-width="${dir==='discharging'?8:5}" opacity="${dir==='discharging'?0.12:0.08}" stroke-linecap="round"/>
+  <use href="#hp${uid}" fill="none" ${homeStroke}
+    stroke-width="${dir==='discharging'?8:5}"
+    opacity="${dir==='discharging'?0.12:0.08}" stroke-linecap="round"/>
   <use href="#hp${uid}" fill="none" ${homeStroke} stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>
   ${showGrid ? `
-    <use href="#gp${uid}" fill="none" stroke="#3b82f6" stroke-width="4" opacity="0.1" stroke-linecap="round"/>
-    <use href="#gp${uid}" fill="none" stroke="#3b82f6" stroke-width="1.2" opacity="0.28" stroke-linecap="round"/>
+    <use href="#gp${uid}" fill="none" stroke="${gridColor}" stroke-width="4" opacity="0.1" stroke-linecap="round"/>
+    <use href="#gp${uid}" fill="none" stroke="${gridColor}" stroke-width="1.2" opacity="0.28" stroke-linecap="round"/>
   ` : ''}
 
   <!-- Animierte Partikel -->
   ${solarActive ? pts(nPts(totalSolar,8000), '#fbbf24', `sp${uid}`, solarDur) : ''}
-  ${pts(nPts(acPower||Math.abs(power||0),3500), homeColor, `hp${uid}`, homeDur)}
-  ${showGrid ? pts(2, '#3b82f6', `gp${uid}`, gridDur) : ''}
+  ${pts(nPts(homePowerForAnim, 5000), homeColor, `hp${uid}`, homeDur)}
+  ${showGrid && gridDur ? pts(nPts(Math.abs(gridPower||0),3000), gridColor, `gp${uid}`, gridDur) : ''}
 
   <!-- SOLAR NODE -->
   ${solarActive ? `
@@ -902,12 +940,25 @@
     <text x="82" y="55" text-anchor="middle" font-size="7.5" fill="#1a2535" font-family="Inter,sans-serif">— W</text>
   `}
 
-  <!-- HAUS NODE -->
+  <!-- HAUS NODE — mit Gesamtverbrauch prominent -->
   <circle cx="226" cy="24" r="26" fill="${homeColor}" opacity="0.05"/>
   <circle cx="226" cy="24" r="18" fill="${homeColor}" opacity="0.09"/>
   <circle cx="226" cy="24" r="13" fill="#07040f" stroke="${homeColor}" stroke-width="1.5" stroke-opacity="0.6"/>
   <text x="226" y="28" text-anchor="middle" font-size="13" fill="${homeColor}">🏠</text>
-  <text x="226" y="55" text-anchor="middle" font-size="7.5" fill="${homeColor}" font-family="Inter,sans-serif" font-weight="600">${acPower !== null ? formatPower(acPower) : '— W'}</text>
+  <!-- Hausverbrauch: prominenter als bisher -->
+  ${homePower !== null ? `
+    <rect x="196" y="44" width="60" height="16" rx="6"
+      fill="rgba(4,6,14,0.88)" stroke="${homeColor}" stroke-width="0.8" stroke-opacity="0.5"/>
+    <text x="226" y="55" text-anchor="middle" font-size="8.5" fill="${homeColor}"
+      font-family="Inter,sans-serif" font-weight="700">${formatPower(homePower)}</text>
+    <text x="226" y="72" text-anchor="middle" font-size="6.5" fill="#2a3f55"
+      font-family="Inter,sans-serif" letter-spacing="0.5">VERBRAUCH</text>
+  ` : `
+    <text x="226" y="55" text-anchor="middle" font-size="7.5" fill="${homeColor}"
+      font-family="Inter,sans-serif" font-weight="600">
+      ${acPower !== null ? formatPower(acPower) : '— W'}
+    </text>
+  `}
 
   <!-- BATTERIE NODE (SOC-Ring) -->
   <circle cx="154" cy="92" r="${SR}" fill="none"
@@ -931,25 +982,29 @@
     ${dir==='charging'?'↑':dir==='discharging'?'↓':'◎'} ${formatPower(Math.abs(power||0))}
   </text>
 
-  <!-- Power-Badges -->
+  <!-- Flow-Badge Solar -->
   ${solarActive && totalSolar ? `
-    <rect x="46" y="62" width="34" height="12" rx="5" fill="rgba(4,8,16,0.92)" stroke="#fbbf24" stroke-width="0.7" stroke-opacity="0.45"/>
-    <text x="63" y="71" text-anchor="middle" font-size="7" fill="#fbbf24" font-family="Inter,sans-serif" font-weight="600">${formatPower(totalSolar)}</text>
-  ` : ''}
-  ${acPower !== null ? `
-    <rect x="228" y="62" width="34" height="12" rx="5" fill="rgba(4,8,16,0.92)" stroke="${homeColor}" stroke-width="0.7" stroke-opacity="0.45"/>
-    <text x="245" y="71" text-anchor="middle" font-size="7" fill="${homeColor}" font-family="Inter,sans-serif" font-weight="600">${formatPower(acPower)}</text>
+    <rect x="46" y="62" width="34" height="12" rx="5"
+      fill="rgba(4,8,16,0.92)" stroke="#fbbf24" stroke-width="0.7" stroke-opacity="0.45"/>
+    <text x="63" y="71" text-anchor="middle" font-size="7" fill="#fbbf24"
+      font-family="Inter,sans-serif" font-weight="600">${formatPower(totalSolar)}</text>
   ` : ''}
 
-  <!-- NETZ NODE -->
+  <!-- NETZ NODE — mit Import/Export-Anzeige -->
   ${showGrid ? `
-    <circle cx="154" cy="163" r="14" fill="#050d1a" stroke="#3b82f6" stroke-width="1.2" stroke-opacity="0.4"/>
-    <text x="154" y="167" text-anchor="middle" font-size="11" fill="#3b82f6">🔌</text>
+    <circle cx="154" cy="163" r="15" fill="#050d1a" stroke="${gridColor}" stroke-width="1.2" stroke-opacity="0.5"/>
+    <text x="154" y="167" text-anchor="middle" font-size="11" fill="${gridColor}">🔌</text>
+    ${gridLabel ? `
+      <rect x="119" y="179" width="70" height="14" rx="5"
+        fill="rgba(4,6,14,0.88)" stroke="${gridColor}" stroke-width="0.6" stroke-opacity="0.4"/>
+      <text x="154" y="189" text-anchor="middle" font-size="7.5" fill="${gridColor}"
+        font-family="Inter,sans-serif" font-weight="600">${gridLabel}</text>
+    ` : ''}
   ` : ''}
 
   <!-- MPPT-Chips -->
   ${mpptActive.length > 1 ? `
-    <g transform="translate(10,${showGrid ? 182 : 165})">
+    <g transform="translate(10,${showGrid ? 200 : 168})">
       ${mpptActive.map((m,i) => {
         const cw = Math.min(70, (288) / mpptActive.length - 4);
         return `<rect x="${i*(cw+4)}" y="0" width="${cw}" height="14" rx="4"
@@ -1185,6 +1240,8 @@
         { key: 'battery_voltage',                domain: 'sensor'        },
         { key: 'battery_total_energy',           domain: 'sensor'        },
         { key: 'internal_temperature',           domain: 'sensor'        },
+        { key: 'home_consumption',               domain: 'sensor'        },
+        { key: 'grid_power',                     domain: 'sensor'        },
         { key: 'ac_power',                       domain: 'sensor'        },
         { key: 'ac_offgrid_power',               domain: 'sensor'        },
         { key: 'total_daily_charging_energy',    domain: 'sensor'        },

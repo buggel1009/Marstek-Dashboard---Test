@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Energy Management Dashboard — Demo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: #060a12;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Plugin laden (IIFE, kein Modul) -->
+<script src="energy-management-dashboard.js"></script>
+
+<script>
+(function() {
+
+  // ── Hilfsfunktion: Karte erzeugen ────────────────────────────────────
+  function card(cfg, states) {
+    const el = document.createElement('energy-management-dashboard');
+    el.style.cssText = 'display:block;width:340px;';
+    document.body.appendChild(el);
+    el.hass = { states, callService: () => {} };
+    el.setConfig(cfg);
+    return el;
+  }
+
+  const baseEntities = {
+    battery_soc:                    'sensor.soc',
+    battery_power:                  'sensor.bat_power',
+    home_consumption:               'sensor.home_consumption',
+    grid_power:                     'sensor.grid_power',
+    mppt1_power:                    'sensor.mppt1',
+    ac_power:                       'sensor.ac_power',
+    internal_temperature:           'sensor.temp',
+    battery_voltage:                'sensor.voltage',
+    battery_current:                'sensor.current',
+    total_daily_charging_energy:    'sensor.daily_c',
+    total_daily_discharging_energy: 'sensor.daily_d',
+    stored_energy:                  'sensor.stored',
+    battery_cycle_count_calc:       'sensor.cycles',
+    round_trip_efficiency_total:    'sensor.eff',
+    balance_status:                 'sensor.balance',
+    balance_last_measurement:       'sensor.balance_mv',
+    wifi_status:                    'binary_sensor.wifi',
+    force_mode:                     'select.force_mode',
+  };
+
+  // ── KARTE 1: Laden 72% · Solar aktiv · Netz-Einspeisung ──────────────
+  card(
+    { title: 'Heimspeicher', entities: baseEntities,
+      show_controls: true, show_health: true, show_energy_stats: true },
+    {
+      'sensor.soc':              { state: '72', last_updated: new Date().toISOString() },
+      'sensor.bat_power':        { state: '-2150' },   // negativ = lädt
+      'sensor.home_consumption': { state: '3720' },    // ← Gesamtverbrauch Haus
+      'sensor.grid_power':       { state: '-850'  },   // negativ = Einspeisung ins Netz
+      'sensor.mppt1':            { state: '3800' },
+      'sensor.ac_power':         { state: '2100' },
+      'sensor.temp':             { state: '28' },
+      'sensor.voltage':          { state: '51.6' },
+      'sensor.current':          { state: '41' },
+      'sensor.daily_c':          { state: '8.4' },
+      'sensor.daily_d':          { state: '3.2' },
+      'sensor.stored':           { state: '7.2' },
+      'sensor.cycles':           { state: '247' },
+      'sensor.eff':              { state: '94.2' },
+      'sensor.balance':          { state: 'Balanciert' },
+      'sensor.balance_mv':       { state: '7' },
+      'binary_sensor.wifi':      { state: 'on' },
+      'select.force_mode':       { state: 'Auto' },
+    }
+  );
+
+  // ── KARTE 2: Entladen 58% · Netzbezug ────────────────────────────────
+  const e2 = {};
+  Object.keys(baseEntities).forEach(k => e2[k] = baseEntities[k].replace('sensor.', 'sensor.b_').replace('binary_sensor.', 'binary_sensor.b_').replace('select.', 'select.b_'));
+
+  card(
+    { title: 'Hausbatterie', entities: e2,
+      show_controls: true, show_health: true, show_energy_stats: true },
+    {
+      'sensor.b_soc':              { state: '58', last_updated: new Date().toISOString() },
+      'sensor.b_bat_power':        { state: '1840' },    // positiv = entlädt
+      'sensor.b_home_consumption': { state: '3740' },    // ← Hausverbrauch
+      'sensor.b_grid_power':       { state: '1200' },    // positiv = Netzbezug
+      'sensor.b_mppt1':            { state: '0' },
+      'sensor.b_ac_power':         { state: '1840' },
+      'sensor.b_temp':             { state: '24' },
+      'sensor.b_voltage':          { state: '50.4' },
+      'sensor.b_current':          { state: '36' },
+      'sensor.b_daily_c':          { state: '5.1' },
+      'sensor.b_daily_d':          { state: '7.3' },
+      'sensor.b_stored':           { state: '11.6' },
+      'sensor.b_cycles':           { state: '412' },
+      'sensor.b_eff':              { state: '96.1' },
+      'sensor.b_balance':          { state: 'Geringe Unbalance' },
+      'sensor.b_balance_mv':       { state: '32' },
+      'binary_sensor.b_wifi':      { state: 'on' },
+      'select.b_force_mode':       { state: 'Force Discharge' },
+    }
+  );
+
+})();
+</script>
+
+</body>
+</html>
