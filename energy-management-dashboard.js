@@ -110,6 +110,11 @@
     { key: 'system_discharge_power',           domain: 'sensor',        label: 'System Entladeleistung (Multi)',    required: false, group: 'multi'    },
     { key: 'system_daily_charging_energy',     domain: 'sensor',        label: 'System Tagesladung (Multi)',        required: false, group: 'multi'    },
     { key: 'system_daily_discharging_energy',  domain: 'sensor',        label: 'System Tagesentladung (Multi)',     required: false, group: 'multi'    },
+    // ── E-Auto (Wallbox / EVCC / go-e / openWB) ──────────────────────────────
+    { key: 'ev_charge_power',                  domain: 'sensor',        label: 'E-Auto Ladeleistung (W)',           required: false, group: 'ev'       },
+    { key: 'ev_soc',                           domain: 'sensor',        label: 'E-Auto Akku-Stand (%)',             required: false, group: 'ev'       },
+    { key: 'ev_connected',                     domain: 'binary_sensor', label: 'E-Auto verbunden',                  required: false, group: 'ev'       },
+    { key: 'ev_daily_energy',                  domain: 'sensor',        label: 'E-Auto geladen heute (kWh)',        required: false, group: 'ev'       },
   ];
 
   // ─── Force-Mode Optionen & Mapping ───────────────────────────────────────
@@ -665,6 +670,14 @@
       const balStatus  = this._state('balance_status');
       const balLast    = this._num('balance_last_measurement');
       const balAvg     = this._num('balance_delta_avg');
+      // ── E-Auto ─────────────────────────────────────────────────────
+      const evPower     = this._num('ev_charge_power');
+      const evSoc       = this._num('ev_soc');
+      const evConnState = this._state('ev_connected');
+      const evConnected = evConnState === 'on' || evConnState === 'true' || evConnState === '1' || evPower !== null;
+      const evCharging  = evPower !== null && evPower > 10;
+      const evDailyKwh  = this._num('ev_daily_energy');
+      const hasEv       = !!cfg.entities.ev_charge_power || !!cfg.entities.ev_connected || !!cfg.entities.ev_soc;
       const balTrend   = this._state('balance_trend');
       const mppt        = [1,2,3,4].map(i => ({ power: this._num(`mppt${i}_power`), voltage: this._num(`mppt${i}_voltage`), current: this._num(`mppt${i}_current`) }));
       const totalSolar  = mppt.some(m => m.power !== null) ? mppt.reduce((s, m) => s + (m.power || 0), 0) : null;
@@ -744,7 +757,6 @@
       const solarDur = flowDur(totalSolar, 8000, 0.7, 2.5);
       const homeDur  = flowDur(homePower != null ? homePower : Math.abs(power != null ? power : 0), 5000, 0.6, 2.2);
       const gridDur  = gridPower !== null ? (flowDur(Math.abs(gridPower), 3000, 0.8, 2.4) || '2.0') : null;
-      const batDur   = flowDur(Math.abs(power != null ? power : 0), 4000, 0.8, 2.5);
 
       const nPts = (p, max) => p ? Math.max(2, Math.min(4, Math.ceil(Math.abs(p) / max * 4))) : 2;
 
@@ -777,12 +789,60 @@
       const gpathGrid  = gridImporting ? "M 58,0 L 58,196"   : "M 58,196 L 58,0";
       const gpathSolar = "M 170,0 L 170,125";
       const gpathHouse = "M 282,0 L 282,196";
-      const gpathBat   = dir === "discharging" ? "M 262,238 L 262,285" : "M 262,285 L 262,238";
+
+      // ── E-Auto HTML-Block (vor dem SVG berechnet, kein nested template) ──
+      const evCol  = evCharging ? '#34d399' : evConnected ? '#1e6a50' : '#1a2535';
+      const evGlow = evCharging ? 0.18 : 0.06;
+      const evLine = evCharging ? 0.9  : evConnected ? 0.35 : 0.15;
+      const evDash = evCharging ? 'none' : '4,3';
+      const evTxtCol = evCharging ? '#34d399' : evConnected ? '#2a6a50' : '#1e3040';
+      const evBadgeBorder = evCharging ? 0.85 : evConnected ? 0.4 : 0.18;
+      const evLabel = evCharging
+        ? (evSoc !== null ? fmtDE(evPower) + ' · ' + Math.round(evSoc) + '%' : fmtDE(evPower))
+        : evConnected ? 'Verbunden' : 'Kein E-Auto';
+      const evParticles = evCharging
+        ? '<circle r="2.5" fill="#34d399" opacity="0" filter="url(#fg' + uid + ')">'
+          + '<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.08;0.2;0.9;1" dur="1.2s" repeatCount="indefinite"/>'
+          + '<animateMotion dur="1.2s" begin="0s" repeatCount="indefinite"><mpath href="#ev' + uid + '"/></animateMotion></circle>'
+          + '<circle r="2.5" fill="#34d399" opacity="0" filter="url(#fg' + uid + ')">'
+          + '<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.08;0.2;0.9;1" dur="1.2s" begin="-0.6s" repeatCount="indefinite"/>'
+          + '<animateMotion dur="1.2s" begin="-0.6s" repeatCount="indefinite"><mpath href="#ev' + uid + '"/></animateMotion></circle>'
+        : '';
+      const evSVGBlock = hasEv
+        ? '<path id="ev' + uid + '" d="M 140,281 C 124,281 116,281 104,281"/>'
+          + '<path d="M 140,281 C 124,281 116,281 104,281" fill="none" stroke="' + evCol + '" stroke-width="6" opacity="' + evGlow + '" stroke-linecap="round"/>'
+          + '<path d="M 140,281 C 124,281 116,281 104,281" fill="none" stroke="' + evCol + '" stroke-width="2" opacity="' + evLine + '" stroke-linecap="round" stroke-dasharray="' + evDash + '"/>'
+          + '<circle cx="106" cy="281" r="5" fill="#060e16" stroke="' + evCol + '" stroke-width="1.2" stroke-opacity="' + (evCharging?0.9:evConnected?0.5:0.2) + '"/>'
+          + '<text x="106" y="284" text-anchor="middle" font-size="6" fill="' + evCol + '">&#x26A1;</text>'
+          + evParticles
+          + '<rect x="22" y="281" width="78" height="17" rx="5" fill="rgba(4,8,18,0.92)" stroke="' + evCol + '" stroke-width="0.8" stroke-opacity="' + evBadgeBorder + '"/>'
+          + '<text x="61" y="292" text-anchor="middle" font-size="7.5" font-weight="700" fill="' + evTxtCol + '" font-family="Inter,sans-serif">' + evLabel + '</text>'
+        : '';
+
+      // ── Batterie-Speicher-Box (pulsiert grün=Laden / rot=Entladen) ──
+      const batPulse = dir === 'charging' ? '#34d399' : dir === 'discharging' ? '#ef4444' : null;
+      const batBoxStroke = batPulse || batCol;
+      const batBar = (y, baseOp, delay) =>
+        batPulse
+          ? '<rect x="283" y="' + y + '" width="14" height="7" rx="1" fill="' + batPulse + '" opacity="' + baseOp + '"><animate attributeName="opacity" values="' + baseOp + ';0.75;' + baseOp + '" dur="1.5s" begin="' + delay + 's" repeatCount="indefinite"/></rect>'
+          : '<rect x="283" y="' + y + '" width="14" height="7" rx="1" fill="' + batCol + '" opacity="' + baseOp + '"/>';
+      const batGlow = batPulse
+        ? '<rect x="275" y="195" width="30" height="46" rx="6" fill="' + batPulse + '" opacity="0.05"><animate attributeName="opacity" values="0.04;0.24;0.04" dur="1.6s" repeatCount="indefinite"/></rect>'
+        : '';
+      // Lade-Welle: von unten nach oben; Entlade-Welle: von oben nach unten
+      const dTop = dir === 'discharging' ? 0    : 0.9;
+      const dMid = 0.45;
+      const dBot = dir === 'discharging' ? 0.9  : 0;
+      const batBoxBlock = batGlow
+        + '<rect x="280" y="200" width="20" height="36" rx="3" fill="#081420" stroke="' + batBoxStroke + '" stroke-width="0.9" stroke-opacity="' + (batPulse ? 0.7 : 0.4) + '"/>'
+        + batBar(203, soc !== null && soc > 66 ? 0.22 : 0.06, dTop)
+        + batBar(212, soc !== null && soc > 33 ? 0.16 : 0.06, dMid)
+        + batBar(221, 0.1, dBot)
+        + '<rect x="286" y="198" width="8" height="3" rx="1" fill="#081420" stroke="' + batBoxStroke + '" stroke-width="0.5" stroke-opacity="' + (batPulse ? 0.5 : 0.3) + '"/>';
 
       const houseSVG = `<svg viewBox="0 0 340 310" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
   <defs>
     <filter id="fg${uid}"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="fb${uid}"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <filter id="soft${uid}"><feGaussianBlur stdDeviation="2"/></filter>
     <linearGradient id="lg${uid}" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="${gridCol}" stop-opacity="1"/><stop offset="100%" stop-color="${gridCol}" stop-opacity="0"/>
@@ -793,13 +853,9 @@
     <linearGradient id="lh${uid}" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#67e8f9" stop-opacity="1"/><stop offset="100%" stop-color="#0891b2" stop-opacity="0"/>
     </linearGradient>
-    <linearGradient id="lb${uid}" x1="0%" y1="${dir==="discharging"?"0%":"100%"}" x2="0%" y2="${dir==="discharging"?"100%":"0%"}">
-      <stop offset="0%" stop-color="${batCol}" stop-opacity="0.9"/><stop offset="100%" stop-color="${batCol}" stop-opacity="0"/>
-    </linearGradient>
     <path id="pg${uid}" d="${gpathGrid}"/>
     <path id="ps${uid}" d="${gpathSolar}"/>
     <path id="ph${uid}" d="${gpathHouse}"/>
-    <path id="pb${uid}" d="${gpathBat}"/>
   </defs>
   <ellipse cx="172" cy="289" rx="118" ry="11" fill="#000" opacity="0.4"/>
   <rect x="82" y="196" width="68" height="80" rx="2" fill="#0b1520"/>
@@ -830,18 +886,18 @@
   <line x1="220" y1="190" x2="248" y2="190" stroke="rgba(255,255,255,0.04)" stroke-width="0.7"/>
   <rect x="183" y="221" width="34" height="55" rx="2" fill="#091018" stroke="rgba(255,255,255,0.06)" stroke-width="0.7"/>
   <circle cx="213" cy="249" r="2" fill="rgba(255,190,80,0.2)"/>
-  <rect x="254" y="200" width="20" height="36" rx="3" fill="#081420" stroke="${batCol}" stroke-width="0.8" stroke-opacity="0.4"/>
-  <rect x="257" y="203" width="14" height="7" rx="1" fill="${batCol}" opacity="${soc !== null && soc > 66 ? 0.22 : 0.06}"/>
-  <rect x="257" y="212" width="14" height="7" rx="1" fill="${batCol}" opacity="${soc !== null && soc > 33 ? 0.16 : 0.06}"/>
-  <rect x="257" y="221" width="14" height="7" rx="1" fill="${batCol}" opacity="0.1"/>
-  <rect x="260" y="198" width="8" height="3" rx="1" fill="#081420" stroke="${batCol}" stroke-width="0.5" stroke-opacity="0.3"/>
+  ${batBoxBlock}
   <ellipse cx="90" cy="285" rx="42" ry="8" fill="rgba(0,0,0,0.3)"/>
   <rect x="55" y="267" width="72" height="18" rx="7" fill="#0c1a26"/>
   <rect x="63" y="259" width="56" height="16" rx="5" fill="#0c1a26"/>
   <rect x="57" y="279" width="11" height="6" rx="3" fill="#060e16"/>
   <rect x="114" y="279" width="11" height="6" rx="3" fill="#060e16"/>
-  <rect x="55" y="269" width="5" height="5" rx="1" fill="rgba(255,210,80,0.18)"/>
+  <rect x="55" y="269" width="5" height="5" rx="1" fill="${evCharging ? 'rgba(52,211,153,0.6)' : 'rgba(255,210,80,0.18)'}"/>
   <rect x="122" y="269" width="5" height="5" rx="1" fill="rgba(255,80,80,0.12)"/>
+
+  <!-- ── E-AUTO LADEKABEL & ANZEIGE ── -->
+  ${evSVGBlock}
+
   ${showGrid ? `<line x1="58" y1="0" x2="58" y2="196" stroke="${gridCol}" stroke-width="10" opacity="0.06" stroke-linecap="round"/>
   <line x1="58" y1="0" x2="58" y2="196" stroke="${gridCol}" stroke-width="2.5" opacity="0.14" stroke-linecap="round"/>
   <line x1="58" y1="0" x2="58" y2="196" stroke="url(#lg${uid})" stroke-width="1.6" stroke-linecap="round" filter="url(#fg${uid})"/>
@@ -854,28 +910,27 @@
   <line x1="282" y1="0" x2="282" y2="196" stroke="#22d3ee" stroke-width="2.5" opacity="0.14" stroke-linecap="round"/>
   <line x1="282" y1="0" x2="282" y2="196" stroke="url(#lh${uid})" stroke-width="1.6" stroke-linecap="round" filter="url(#fg${uid})"/>
   <line x1="282" y1="193" x2="258" y2="180" stroke="#22d3ee" stroke-width="1" opacity="0.22" stroke-linecap="round"/>
-  <line x1="262" y1="238" x2="262" y2="285" stroke="${batCol}" stroke-width="8" opacity="0.07" stroke-linecap="round"/>
-  <line x1="262" y1="238" x2="262" y2="285" stroke="url(#lb${uid})" stroke-width="1.5" stroke-linecap="round" filter="url(#fb${uid})"/>
   ${showGrid ? mkPts(nPts(Math.abs(gridPower||0),3000), gridCol, "#pg"+uid, gridDur) : ""}
   ${solarActive ? mkPts(nPts(totalSolar,8000), "#fcd34d", "#ps"+uid, solarDur) : ""}
   ${mkPts(nPts(homePower||Math.abs(power||0),5000), "#67e8f9", "#ph"+uid, homeDur)}
-  ${dir !== "standby" ? mkPts(2, batCol, "#pb"+uid, batDur) : ""}
   ${showGrid ? `<text x="58" y="16" text-anchor="middle" font-size="14" font-weight="700" fill="${gridCol}" font-family="Inter,sans-serif" letter-spacing="-0.5">${gridPower !== null ? fmtDE(Math.abs(gridPower)) : "— W"}</text>
   <text x="58" y="28" text-anchor="middle" font-size="7" font-weight="600" fill="${gridCol}" font-family="Inter,sans-serif" letter-spacing="1.5" opacity="0.7">${gridTxt}</text>` : ""}
   <text x="170" y="16" text-anchor="middle" font-size="14" font-weight="700" fill="${solarActive?"#fcd34d":"#1a2535"}" font-family="Inter,sans-serif" letter-spacing="-0.5">${totalSolar !== null ? fmtDE(totalSolar) : "— W"}</text>
   <text x="170" y="28" text-anchor="middle" font-size="7" font-weight="600" fill="${solarActive?"#f59e0b":"#1a2535"}" font-family="Inter,sans-serif" letter-spacing="1.5" opacity="0.7">SOLAR</text>
   <text x="282" y="16" text-anchor="middle" font-size="14" font-weight="700" fill="#67e8f9" font-family="Inter,sans-serif" letter-spacing="-0.5">${homePower !== null ? fmtDE(homePower) : acPower !== null ? fmtDE(acPower) : "— W"}</text>
   <text x="282" y="28" text-anchor="middle" font-size="7" font-weight="600" fill="#0891b2" font-family="Inter,sans-serif" letter-spacing="1.5" opacity="0.7">HAUS</text>
-  <rect x="236" y="248" width="52" height="22" rx="8" fill="rgba(4,8,18,0.88)" stroke="${batCol}" stroke-width="0.7" stroke-opacity="0.35"/>
-  <text x="262" y="263" text-anchor="middle" font-size="13" font-weight="700" fill="${socCol}" font-family="Inter,sans-serif" letter-spacing="-0.3">${soc !== null ? Math.round(soc)+"%" : "—"}</text>
-  <text x="262" y="277" text-anchor="middle" font-size="6.5" font-weight="600" fill="${batCol}" font-family="Inter,sans-serif" letter-spacing="0.8" opacity="0.8">${batLbl}${Math.abs(power||0) > 20 ? " · "+fmtDE(Math.abs(power)) : ""}</text>
-  ${selfPct !== null ? `<text x="148" y="278" text-anchor="middle" font-size="9" font-weight="600" fill="#22c55e" font-family="Inter,sans-serif">${selfPct} Eigenverbrauch</text>` : modeLabel ? `<text x="148" y="278" text-anchor="middle" font-size="9" font-weight="500" fill="#1e3a4a" font-family="Inter,sans-serif">${modeLabel}</text>` : ""}
+  <rect x="258" y="248" width="58" height="22" rx="8" fill="rgba(4,8,18,0.88)" stroke="${batCol}" stroke-width="0.7" stroke-opacity="0.35"/>
+  <text x="287" y="263" text-anchor="middle" font-size="13" font-weight="700" fill="${socCol}" font-family="Inter,sans-serif" letter-spacing="-0.3">${soc !== null ? Math.round(soc)+"%" : "—"}</text>
+  <text x="287" y="277" text-anchor="middle" font-size="6.5" font-weight="600" fill="${batCol}" font-family="Inter,sans-serif" letter-spacing="0.8" opacity="0.8">${batLbl}${Math.abs(power||0) > 20 ? " · "+fmtDE(Math.abs(power)) : ""}</text>
+  ${selfPct !== null ? `<text x="170" y="302" text-anchor="middle" font-size="9" font-weight="600" fill="#22c55e" font-family="Inter,sans-serif">${selfPct} Eigenverbrauch</text>` : modeLabel ? `<text x="170" y="302" text-anchor="middle" font-size="9" font-weight="500" fill="#1e3a4a" font-family="Inter,sans-serif">${modeLabel}</text>` : ""}
 
   <!-- Klickbare Bereiche (unsichtbar) -->
   ${showGrid && cfg.entities.grid_power ? `<rect x="20" y="0" width="80" height="230" rx="4" fill="transparent" data-mv-entity="grid_power" style="cursor:pointer"/>` : ''}
   ${cfg.entities.mppt1_power || cfg.entities.mppt2_power ? `<rect x="120" y="0" width="100" height="145" rx="4" fill="transparent" data-mv-entity="${cfg.entities.mppt1_power ? 'mppt1_power' : 'mppt2_power'}" style="cursor:pointer"/>` : ''}
   ${cfg.entities.home_consumption || cfg.entities.ac_power ? `<rect x="232" y="0" width="100" height="230" rx="4" fill="transparent" data-mv-entity="${cfg.entities.home_consumption ? 'home_consumption' : 'ac_power'}" style="cursor:pointer"/>` : ''}
   ${cfg.entities.battery_soc ? `<rect x="215" y="235" width="90" height="55" rx="4" fill="transparent" data-mv-entity="battery_soc" style="cursor:pointer"/>` : ''}
+  ${hasEv && cfg.entities.ev_charge_power ? `<rect x="42" y="243" width="76" height="40" rx="4" fill="transparent" data-mv-entity="ev_charge_power" style="cursor:pointer"/>` : ''}
+  ${hasEv && !cfg.entities.ev_charge_power && cfg.entities.ev_soc ? `<rect x="42" y="243" width="76" height="40" rx="4" fill="transparent" data-mv-entity="ev_soc" style="cursor:pointer"/>` : ''}
 </svg>`;
 
       const html = `
@@ -1041,6 +1096,10 @@
         { key: 'user_work_mode',                 domain: 'select'        },
         { key: 'set_charge_power',               domain: 'number'        },
         { key: 'set_discharge_power',            domain: 'number'        },
+        { key: 'ev_charge_power',                domain: 'sensor'        },
+        { key: 'ev_soc',                         domain: 'sensor'        },
+        { key: 'ev_connected',                   domain: 'binary_sensor' },
+        { key: 'ev_daily_energy',                domain: 'sensor'        },
       ];
 
       const suggestBox = prefix
