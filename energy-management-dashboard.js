@@ -161,106 +161,125 @@
     return '#22c55e';
   }
 
-  // ─── SVG Gauge ───────────────────────────────────────────────────────────
-  // Kreis: cx=80, cy=76, r=60, viewBox="0 0 160 115"
-  // 270°-Bogen: start lower-left → clockwise → lower-right
-  // Kreis-Umfang = 2π×60 = 376.99
-  // Arc-Länge (270°) = 376.99 × 0.75 = 282.74
-  const CX = 80, CY = 76, R = 60;
-  const CIRC = 2 * Math.PI * R;
-  const ARC_LEN = CIRC * (270 / 360);
-  const GAUGE_ROTATE = `rotate(135, ${CX}, ${CY})`;
-
-  function buildGauge(soc, color) {
-    const s = soc !== null ? clamp(soc, 0, 100) : 0;
-    const fill = ARC_LEN * (s / 100);
-    const displaySoc = soc !== null ? Math.round(soc) : '—';
-
-    return `
-      <svg class="mv-gauge-svg" viewBox="0 0 160 115" xmlns="http://www.w3.org/2000/svg" aria-label="SOC ${displaySoc}%">
-        <defs>
-          <radialGradient id="mvGlowGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="${color}" stop-opacity="0.4"/>
-            <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
-          </radialGradient>
-          <filter id="mvGlow">
-            <feGaussianBlur stdDeviation="3" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
-
-        <!-- Hintergrund-Bogen -->
-        <circle cx="${CX}" cy="${CY}" r="${R}"
-          fill="none"
-          stroke="rgba(255,255,255,0.06)"
-          stroke-width="10"
-          stroke-linecap="round"
-          stroke-dasharray="${ARC_LEN} ${CIRC}"
-          transform="${GAUGE_ROTATE}"
-        />
-
-        <!-- Glow-Schicht -->
-        <circle cx="${CX}" cy="${CY}" r="${R}"
-          fill="none"
-          stroke="${color}"
-          stroke-width="20"
-          stroke-linecap="round"
-          stroke-dasharray="${fill} ${CIRC}"
-          transform="${GAUGE_ROTATE}"
-          opacity="0.12"
-          style="filter: blur(5px);"
-        />
-
-        <!-- Haupt-Bogen -->
-        <circle cx="${CX}" cy="${CY}" r="${R}"
-          fill="none"
-          stroke="${color}"
-          stroke-width="10"
-          stroke-linecap="round"
-          stroke-dasharray="${fill} ${CIRC}"
-          transform="${GAUGE_ROTATE}"
-          class="mv-gauge-fill"
-        />
-
-        <!-- Endpunkt-Punkt -->
-        ${soc !== null && soc > 2 ? (() => {
-          const endAngle = (135 + (s / 100) * 270 - 90) * Math.PI / 180;
-          const ex = CX + R * Math.cos(endAngle);
-          const ey = CY + R * Math.sin(endAngle);
-          return `<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="5" fill="${color}" opacity="0.9"/>`;
-        })() : ''}
-
-        <!-- SOC Wert -->
-        <text x="${CX}" y="${CY - 10}"
-          text-anchor="middle"
-          fill="#f1f5f9"
-          font-size="30"
-          font-weight="300"
-          font-family="Roboto, -apple-system, sans-serif"
-          letter-spacing="-1"
-        >${displaySoc}</text>
-
-        <text x="${CX + (soc !== null ? 16 : 0)}" y="${CY - 10}"
-          text-anchor="start"
-          fill="#64748b"
-          font-size="12"
-          font-family="Roboto, -apple-system, sans-serif"
-        >${soc !== null ? '%' : ''}</text>
-
-        <text x="${CX}" y="${CY + 10}"
-          text-anchor="middle"
-          fill="#475569"
-          font-size="8"
-          font-family="Roboto, -apple-system, sans-serif"
-          letter-spacing="2"
-        >LADEZUSTAND</text>
-      </svg>`;
+  // ─── Hilfsfunktion: kW-Wert mit Komma (DE-Stil) ─────────────────────────
+  function fmtDE(watts) {
+    if (watts === null || watts === undefined || isNaN(Number(watts))) return '—';
+    const w = Math.abs(Number(watts));
+    if (w >= 1000) return (w / 1000).toFixed(2).replace('.', ',') + ' kW';
+    return Math.round(w) + ' W';
   }
+
+  // ─── (buildGauge entfernt – nicht mehr benötigt) ──────────────────────────
 
   // ─── Card CSS ─────────────────────────────────────────────────────────────
   const CARD_CSS = `
     :host { display: block; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── KARTE ── */
+    .mv-card {
+      background: #080c12;
+      border-radius: 22px;
+      color: #dde4f0;
+      font-family: var(--paper-font-body1_-_font-family,'Inter',-apple-system,sans-serif);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 24px 48px rgba(0,0,0,0.6);
+    }
+
+    /* ── HEADER ── */
+    .mv-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px;
+    }
+    .mv-hdr-l { display: flex; align-items: center; gap: 10px; }
+    .mv-hdr-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+      box-shadow: 0 4px 10px rgba(0,207,255,0.1);
+    }
+    .mv-hdr-name  { font-size: 13px; font-weight: 600; color: #dde8f8; letter-spacing: -0.2px; }
+    .mv-hdr-brand { font-size: 9px; color: #1e3a4a; margin-top: 1px; }
+    .mv-hdr-r { display: flex; align-items: center; gap: 7px; }
+
+    .mv-chip {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 9px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .mv-chip.on  { background: rgba(0,207,255,0.07); color: #00cfff; border: 1px solid rgba(0,207,255,0.15); }
+    .mv-chip.off { background: rgba(100,116,139,0.07); color: #2a3f55; border: 1px solid rgba(100,116,139,0.1); }
+    .mv-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .mv-chip.on .mv-chip-dot { box-shadow: 0 0 5px #00cfff; animation: mv-blink 2s ease-in-out infinite; }
+
+    @keyframes mv-blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+    /* ── HOUSE SVG ── */
+    .mv-house-wrap { display: block; width: 100%; }
+    .mv-house-wrap svg { width: 100%; display: block; }
+
+    /* ── INFO STRIP ── */
+    .mv-info-strip {
+      display: grid; grid-template-columns: repeat(4,1fr);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .mv-info-item {
+      padding: 9px 4px; text-align: center;
+      border-right: 1px solid rgba(255,255,255,0.04);
+    }
+    .mv-info-item:last-child { border-right: none; }
+    .mv-info-v { font-size: 14px; font-weight: 600; line-height: 1; margin-bottom: 3px; }
+    .mv-info-l { font-size: 7px; text-transform: uppercase; letter-spacing: .5px; color: #1e3a4a; }
+    .mv-info-item.sol .mv-info-v { color: #fcd34d; }
+    .mv-info-item.chg .mv-info-v { color: #00cfff; }
+    .mv-info-item.con .mv-info-v { color: #67e8f9; }
+    .mv-info-item.cyc .mv-info-v { color: #a78bfa; }
+
+    /* ── DETAIL ROW ── */
+    .mv-detail-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .mv-detail-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #1e3a4a; }
+    .mv-detail-item b { font-weight: 600; color: #3a5a70; }
+
+    /* ── CONTROLS ── */
+    .mv-ctrl { display: flex; gap: 6px; padding: 10px 14px; }
+    .mv-btn {
+      flex: 1; padding: 9px 4px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02);
+      color: #1e3a4a; font-size: 9.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px; text-align: center;
+      cursor: pointer; font-family: inherit; transition: all .2s;
+    }
+    .mv-btn:hover { background: rgba(255,255,255,0.05); color: #3a5a70; }
+    .mv-btn.ac { background: rgba(0,207,255,0.09); color: #00cfff; border-color: rgba(0,207,255,0.22); }
+    .mv-btn.ad { background: rgba(255,140,50,0.09); color: #ff8c32; border-color: rgba(255,140,50,0.22); }
+    .mv-btn.aa { background: rgba(167,139,250,0.09); color: #a78bfa; border-color: rgba(167,139,250,0.22); }
+
+    /* ── FOOTER ── */
+    .mv-ftr {
+      display: flex; justify-content: space-between;
+      padding: 5px 16px; font-size: 8px; color: #0e1e2e;
+      border-top: 1px solid rgba(255,255,255,0.025);
+    }
+
+    /* ── SETUP ── */
+    .mv-setup {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 12px; padding: 40px 24px; text-align: center; color: #2a3f55;
+    }
+    .mv-setup-ico   { font-size: 44px; opacity: .5; }
+    .mv-setup-title { font-size: 14px; font-weight: 500; color: #4a6a85; }
+    .mv-setup-desc  { font-size: 12px; line-height: 1.6; }
+    .mv-setup-tag {
+      padding: 4px 14px; border-radius: 20px;
+      background: rgba(0,207,255,.1); border: 1px solid rgba(0,207,255,.2);
+      color: #00cfff; font-size: 11px; font-weight: 600;
+    }
 
     .mv-card {
       background: #080f1c;
@@ -322,114 +341,6 @@
       50%     { opacity:.3; }
     }
 
-    /* ── SOC Hero ── */
-    .mv-soc-hero {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      padding: 4px 20px 0;
-    }
-    .mv-soc-big { display: flex; align-items: flex-start; gap: 3px; line-height: 1; }
-    .mv-soc-num {
-      font-size: 80px; font-weight: 200; letter-spacing: -5px; line-height: 1;
-    }
-    .mv-soc-pct { font-size: 22px; font-weight: 300; color: #1e3a4a; margin-top: 14px; }
-
-    .mv-soc-right {
-      display: flex; flex-direction: column; align-items: flex-end; gap: 6px; padding-top: 8px;
-    }
-    .mv-power-num {
-      font-size: 30px; font-weight: 200; letter-spacing: -1px; line-height: 1; text-align: right;
-    }
-    .mv-power-unit { font-size: 13px; font-weight: 400; color: #1e3a4a; margin-left: 1px; }
-
-    .mv-dir-pill {
-      padding: 4px 12px; border-radius: 20px;
-      font-size: 10px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase;
-    }
-    .mv-dir-pill.c { background: rgba(0,207,255,0.1); border: 1px solid rgba(0,207,255,0.22); color: #00cfff; }
-    .mv-dir-pill.d { background: rgba(255,140,50,0.1); border: 1px solid rgba(255,140,50,0.22); color: #ff8c32; }
-    .mv-dir-pill.s { background: rgba(100,116,139,0.08); border: 1px solid rgba(100,116,139,0.15); color: #374a65; }
-    .mv-mode-txt { font-size: 9px; color: #1e3a4a; }
-
-    /* ── Flow wrap ── */
-    .mv-flow-wrap { padding: 0 14px 6px; }
-
-    /* ── Divider ── */
-    .mv-div { height: 1px; background: rgba(255,255,255,0.04); margin: 0 18px; }
-
-    /* ── Stats ── */
-    .mv-stats { display: grid; grid-template-columns: repeat(4,1fr); padding: 14px 0; }
-    .mv-st {
-      text-align: center; padding: 0 4px;
-      border-right: 1px solid rgba(255,255,255,0.04);
-    }
-    .mv-st:last-child { border-right: none; }
-    .mv-st-v { font-size: 17px; font-weight: 500; line-height: 1; margin-bottom: 4px; }
-    .mv-st-l { font-size: 7.5px; text-transform: uppercase; letter-spacing: .4px; color: #1e3a4a; }
-    .mv-st.c .mv-st-v { color: #00cfff; }
-    .mv-st.d .mv-st-v { color: #ff8c32; }
-    .mv-st.s .mv-st-v { color: #a78bfa; }
-    .mv-st.y .mv-st-v { color: #fbbf24; }
-
-    /* ── Balance row ── */
-    .mv-bal-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 8px 18px;
-      border-top: 1px solid rgba(255,255,255,0.04);
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-      font-size: 10px;
-    }
-    .mv-bal-l { display: flex; align-items: center; gap: 7px; color: #2a3f55; }
-    .mv-bal-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-    .mv-bal-r { color: #2a3f55; font-size: 10px; }
-
-    /* ── Data block ── */
-    .mv-data-block {
-      padding: 10px 18px 12px;
-      display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-    }
-    .mv-dr {
-      display: flex; justify-content: space-between; align-items: baseline;
-      padding: 3.5px 0; border-bottom: 1px solid rgba(255,255,255,0.025); font-size: 10.5px;
-    }
-    .mv-dr:last-child { border-bottom: none; }
-    .mv-dn { color: #1e3a4a; }
-    .mv-dv { color: #4a6a85; font-weight: 500; }
-
-    /* ── Controls ── */
-    .mv-ctrl { display: flex; gap: 6px; padding: 12px 14px; }
-    .mv-btn {
-      flex: 1; padding: 10px 4px; border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02);
-      color: #1e3a4a; font-size: 9.5px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .5px; text-align: center;
-      cursor: pointer; font-family: inherit; transition: all .2s;
-    }
-    .mv-btn:hover { background: rgba(255,255,255,0.06); color: #4a6a85; }
-    .mv-btn.ac { background: rgba(0,207,255,0.09); color: #00cfff; border-color: rgba(0,207,255,0.22); }
-    .mv-btn.ad { background: rgba(255,140,50,0.09); color: #ff8c32; border-color: rgba(255,140,50,0.22); }
-    .mv-btn.aa { background: rgba(167,139,250,0.09); color: #a78bfa; border-color: rgba(167,139,250,0.22); }
-
-    /* ── Footer ── */
-    .mv-ftr {
-      display: flex; justify-content: space-between;
-      padding: 7px 18px; font-size: 9px; color: #111e2e;
-      border-top: 1px solid rgba(255,255,255,0.025);
-    }
-
-    /* ── Setup hint ── */
-    .mv-setup {
-      display: flex; flex-direction: column; align-items: center;
-      gap: 12px; padding: 40px 24px; text-align: center; color: #2a3f55;
-    }
-    .mv-setup-ico   { font-size: 44px; opacity: .5; }
-    .mv-setup-title { font-size: 14px; font-weight: 500; color: #4a6a85; }
-    .mv-setup-desc  { font-size: 12px; line-height: 1.6; }
-    .mv-setup-tag {
-      padding: 4px 14px; border-radius: 20px;
-      background: rgba(0,207,255,.1); border: 1px solid rgba(0,207,255,.2);
-      color: #00cfff; font-size: 11px; font-weight: 600;
-    }
   `;
 
   // ─── Editor CSS ────────────────────────────────────────────────────────────
@@ -828,333 +739,185 @@
         return 'linear-gradient(135deg,#00d4aa,#0096c7)'; // default (Marstek etc.)
       })();
 
-      // ── SVG Energiefluss (Vertical Prism Design) ──────────────────
+      // ── Berechnungen für Haus-Design ────────────────────────────────
       const uid = 'mv' + Math.random().toString(36).slice(2, 7);
 
-      const hasAC       = !!cfg.entities.ac_power || !!cfg.entities.home_consumption;
+      // hasGrid + mpptActive werden im Render-Block gesetzt
       const hasGrid     = !!cfg.entities.grid_power;
       const mpptActive  = mppt.filter(m => m.power !== null);
 
-      // SOC-Ring (270°, r=28)
-      const SR = 28;
-      const S_CIRC = 2 * Math.PI * SR;
-      const S_ARC  = S_CIRC * 0.75;
-      const S_FILL = soc !== null ? S_ARC * clamp(soc, 0, 100) / 100 : 0;
-
-      // Animationsdauern
-      const flowDur = (p, maxP = 5000, minD = 0.7, maxD = 3.0) =>
+      const flowDur = (p, maxP, minD, maxD) =>
         p && Math.abs(p) > 20
           ? Math.max(minD, maxD - (Math.abs(p) / maxP) * (maxD - minD)).toFixed(1) : null;
 
-      const solarDur = flowDur(totalSolar, 8000);
-      // Hausverbrauch für Animationsgeschwindigkeit nutzen
-      const homePowerForAnim = homePower ?? acPower ?? Math.abs(power ?? 0);
-      const homeDur  = flowDur(homePowerForAnim, 5000, 0.6, 2.8);
-      const gridDur  = gridPower !== null ? flowDur(Math.abs(gridPower), 3000, 0.8, 2.5) ?? '2.3' : '2.3';
+      const solarDur = flowDur(totalSolar, 8000, 0.7, 2.5);
+      const homeDur  = flowDur(homePower != null ? homePower : Math.abs(power != null ? power : 0), 5000, 0.6, 2.2);
+      const gridDur  = gridPower !== null ? (flowDur(Math.abs(gridPower), 3000, 0.8, 2.4) || '2.0') : null;
+      const batDur   = flowDur(Math.abs(power != null ? power : 0), 4000, 0.8, 2.5);
 
-      const nPts = (p, max = 4000) => p ? Math.max(2, Math.min(4, Math.ceil(Math.abs(p) / max * 4))) : 2;
+      const nPts = (p, max) => p ? Math.max(2, Math.min(4, Math.ceil(Math.abs(p) / max * 4))) : 2;
 
-      const pts = (n, fill, pathId, dur) => {
-        if (!dur) return '';
+      const mkPts = (n, fill, href, dur) => {
+        if (!dur || !n) return "";
         return Array.from({length: n}, (_, i) => {
-          const delay = -(i * parseFloat(dur) / n);
-          return `<circle r="3.5" fill="${fill}" opacity="0" filter="url(#gw${uid})">
-            <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.06;0.14;0.9;1"
-              dur="${dur}s" begin="${delay}s" repeatCount="indefinite"/>
-            <animateMotion dur="${dur}s" begin="${delay}s" repeatCount="indefinite">
-              <mpath href="#${pathId}"/>
-            </animateMotion>
-          </circle>`;
-        }).join('');
+          const d = -(i * parseFloat(dur) / n);
+          return "<circle r=\"3.2\" fill=\"" + fill + "\" opacity=\"0\" filter=\"url(#fg" + uid + ")\">"
+            + "<animate attributeName=\"opacity\" values=\"0;0;1;1;0\" keyTimes=\"0;0.08;0.18;0.9;1\" dur=\"" + dur + "s\" begin=\"" + d + "s\" repeatCount=\"indefinite\"/>"
+            + "<animateMotion dur=\"" + dur + "s\" begin=\"" + d + "s\" repeatCount=\"indefinite\"><mpath href=\"" + href + "\"/></animateMotion></circle>";
+        }).join("");
       };
 
-      // Pfade: Solar(82,20)→Batterie(154,92)→Haus(226,20), Netz(154,92)→unten
-      const solarPath = `M 82,36 L 82,72 C 82,92 154,92 154,92`;
-      const homePath  = `M 154,92 C 154,92 226,72 226,52 L 226,36`;
-      const gridPath  = `M 154,110 L 154,155`;
-
-      // Hausverbrauch-Farbe: orange wenn hoch, lila wenn normal
-      const homeColor  = dir === 'discharging' ? '#ff8c32' : '#a78bfa';
-      const homeStroke = dir === 'discharging' ? `stroke="#ff8c32"` : `stroke="#a78bfa"`;
-
-      // Netzfarbe: rot = Bezug, grün = Einspeisung
-      const gridColor  = gridPower !== null
-        ? (gridPower > 20 ? '#f87171' : gridPower < -20 ? '#34d399' : '#3b82f6')
-        : '#3b82f6';
-      const gridLabel  = gridPower !== null
-        ? (gridPower > 20 ? `↓ ${formatPower(gridPower)}` : gridPower < -20 ? `↑ ${formatPower(-gridPower)}` : '◎ 0 W')
-        : null;
-
-      const showGrid   = hasGrid || (hasAC && solarActive);
-      // Netz-Partikelrichtung: umkehren bei Einspeisung
+      const gridImporting = gridPower !== null && gridPower > 20;
       const gridExporting = gridPower !== null && gridPower < -20;
-      const gridPathAnim  = gridExporting
-        ? `M 154,155 L 154,110`   // Einspeisung: Haus→Netz
-        : `M 154,110 L 154,155`;  // Bezug: Netz→Batterie
+      const gridCol  = gridExporting ? "#34d399" : gridImporting ? "#c084fc" : "#3b82f6";
+      const showGrid = hasGrid || (!!cfg.entities.ac_power && solarActive);
+      const gridTxt  = gridExporting ? "EINSPEISUNG" : "BEZUG";
 
-      const svgHeight = mpptActive.length > 1 ? 225 : (showGrid ? 200 : 185);
+      const socCol  = soc === null ? "#1e3a4a" : soc <= 10 ? "#ef4444" : soc <= 20 ? "#ff8c32" : soc <= 40 ? "#f59e0b" : "#00cfff";
+      const batCol  = dir === "charging" ? "#00cfff" : dir === "discharging" ? "#ff8c32" : "#1e3a4a";
+      const batLbl  = dir === "charging" ? "&#x2191; LADEN" : dir === "discharging" ? "&#x2193; ENTLADEN" : "BEREIT";
 
-      const svg = `
-<svg viewBox="0 0 308 ${svgHeight}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
-  <defs>
-    <filter id="gw${uid}"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <path id="sp${uid}" d="${solarPath}"/>
-    <path id="hp${uid}" d="${homePath}"/>
-    <path id="gp${uid}" d="${gridPathAnim}"/>
-  </defs>
-
-  <!-- Ambiente Glow Batterie -->
-  <circle cx="154" cy="92" r="50" fill="${col}" opacity="0.04"/>
-  <circle cx="154" cy="92" r="36" fill="${col}" opacity="0.06"/>
-
-  <!-- Verbindungslinien -->
-  ${solarActive ? `
-    <use href="#sp${uid}" fill="none" stroke="#fbbf24" stroke-width="8" opacity="0.08" stroke-linecap="round"/>
-    <use href="#sp${uid}" fill="none" stroke="#fbbf24" stroke-width="1.5" opacity="0.35" stroke-linecap="round"/>
-  ` : ''}
-  <use href="#hp${uid}" fill="none" ${homeStroke}
-    stroke-width="${dir==='discharging'?8:5}"
-    opacity="${dir==='discharging'?0.12:0.08}" stroke-linecap="round"/>
-  <use href="#hp${uid}" fill="none" ${homeStroke} stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>
-  ${showGrid ? `
-    <use href="#gp${uid}" fill="none" stroke="${gridColor}" stroke-width="4" opacity="0.1" stroke-linecap="round"/>
-    <use href="#gp${uid}" fill="none" stroke="${gridColor}" stroke-width="1.2" opacity="0.28" stroke-linecap="round"/>
-  ` : ''}
-
-  <!-- Animierte Partikel -->
-  ${solarActive ? pts(nPts(totalSolar,8000), '#fbbf24', `sp${uid}`, solarDur) : ''}
-  ${pts(nPts(homePowerForAnim, 5000), homeColor, `hp${uid}`, homeDur)}
-  ${showGrid && gridDur ? pts(nPts(Math.abs(gridPower||0),3000), gridColor, `gp${uid}`, gridDur) : ''}
-
-  <!-- SOLAR NODE -->
-  ${solarActive ? `
-    <circle cx="82" cy="24" r="26" fill="#fbbf24" opacity="0.05"/>
-    <circle cx="82" cy="24" r="18" fill="#fbbf24" opacity="0.09"/>
-    <circle cx="82" cy="24" r="13" fill="#0a0e00" stroke="#fbbf24" stroke-width="1.5" stroke-opacity="0.6"/>
-    <text x="82" y="28" text-anchor="middle" font-size="14" fill="#fbbf24">☀</text>
-    <text x="82" y="55" text-anchor="middle" font-size="7.5" fill="#fbbf24" font-family="Inter,sans-serif" font-weight="600">${formatPower(totalSolar)}</text>
-  ` : `
-    <circle cx="82" cy="24" r="18" fill="#0a0e1a" opacity="0.6"/>
-    <circle cx="82" cy="24" r="13" fill="#07090f" stroke="#1a2535" stroke-width="1.2"/>
-    <text x="82" y="28" text-anchor="middle" font-size="14" fill="#1a2535">☀</text>
-    <text x="82" y="55" text-anchor="middle" font-size="7.5" fill="#1a2535" font-family="Inter,sans-serif">— W</text>
-  `}
-
-  <!-- HAUS NODE — mit Gesamtverbrauch prominent -->
-  <circle cx="226" cy="24" r="26" fill="${homeColor}" opacity="0.05"/>
-  <circle cx="226" cy="24" r="18" fill="${homeColor}" opacity="0.09"/>
-  <circle cx="226" cy="24" r="13" fill="#07040f" stroke="${homeColor}" stroke-width="1.5" stroke-opacity="0.6"/>
-  <text x="226" y="28" text-anchor="middle" font-size="13" fill="${homeColor}">🏠</text>
-  <!-- Hausverbrauch: prominenter als bisher -->
-  ${homePower !== null ? `
-    <rect x="196" y="44" width="60" height="16" rx="6"
-      fill="rgba(4,6,14,0.88)" stroke="${homeColor}" stroke-width="0.8" stroke-opacity="0.5"/>
-    <text x="226" y="55" text-anchor="middle" font-size="8.5" fill="${homeColor}"
-      font-family="Inter,sans-serif" font-weight="700">${formatPower(homePower)}</text>
-    <text x="226" y="72" text-anchor="middle" font-size="6.5" fill="#2a3f55"
-      font-family="Inter,sans-serif" letter-spacing="0.5">VERBRAUCH</text>
-  ` : `
-    <text x="226" y="55" text-anchor="middle" font-size="7.5" fill="${homeColor}"
-      font-family="Inter,sans-serif" font-weight="600">
-      ${acPower !== null ? formatPower(acPower) : '— W'}
-    </text>
-  `}
-
-  <!-- BATTERIE NODE (SOC-Ring) -->
-  <circle cx="154" cy="92" r="${SR}" fill="none"
-    stroke="${col}" stroke-opacity="0.1" stroke-width="5.5"
-    stroke-dasharray="${S_ARC.toFixed(1)} ${S_CIRC.toFixed(1)}"
-    transform="rotate(135,154,92)" stroke-linecap="round"/>
-  <circle cx="154" cy="92" r="${SR}" fill="none"
-    stroke="${col}" stroke-width="5.5"
-    stroke-dasharray="${S_FILL.toFixed(1)} ${S_CIRC.toFixed(1)}"
-    transform="rotate(135,154,92)" stroke-linecap="round"
-    filter="url(#gw${uid})"/>
-  <circle cx="154" cy="92" r="22" fill="#040a14" stroke="${col}" stroke-width="0.8" stroke-opacity="0.2"/>
-  <text x="154" y="88" text-anchor="middle" font-size="13" font-weight="300"
-    fill="#dde8f8" font-family="Inter,sans-serif" letter-spacing="-0.3">
-    ${soc !== null ? Math.round(soc) + '%' : '—'}
-  </text>
-  <text x="154" y="101" text-anchor="middle" font-size="6.5" fill="#1e3a4a"
-    font-family="Inter,sans-serif" letter-spacing="1.2">SOC</text>
-  <text x="154" y="140" text-anchor="middle" font-size="8" fill="${col}"
-    font-weight="600" font-family="Inter,sans-serif">
-    ${dir==='charging'?'↑':dir==='discharging'?'↓':'◎'} ${formatPower(Math.abs(power||0))}
-  </text>
-
-  <!-- Flow-Badge Solar -->
-  ${solarActive && totalSolar ? `
-    <rect x="46" y="62" width="34" height="12" rx="5"
-      fill="rgba(4,8,16,0.92)" stroke="#fbbf24" stroke-width="0.7" stroke-opacity="0.45"/>
-    <text x="63" y="71" text-anchor="middle" font-size="7" fill="#fbbf24"
-      font-family="Inter,sans-serif" font-weight="600">${formatPower(totalSolar)}</text>
-  ` : ''}
-
-  <!-- NETZ NODE — mit Import/Export-Anzeige -->
-  ${showGrid ? `
-    <circle cx="154" cy="163" r="15" fill="#050d1a" stroke="${gridColor}" stroke-width="1.2" stroke-opacity="0.5"/>
-    <text x="154" y="167" text-anchor="middle" font-size="11" fill="${gridColor}">🔌</text>
-    ${gridLabel ? `
-      <rect x="119" y="179" width="70" height="14" rx="5"
-        fill="rgba(4,6,14,0.88)" stroke="${gridColor}" stroke-width="0.6" stroke-opacity="0.4"/>
-      <text x="154" y="189" text-anchor="middle" font-size="7.5" fill="${gridColor}"
-        font-family="Inter,sans-serif" font-weight="600">${gridLabel}</text>
-    ` : ''}
-  ` : ''}
-
-  <!-- MPPT-Chips -->
-  ${mpptActive.length > 1 ? `
-    <g transform="translate(10,${showGrid ? 200 : 168})">
-      ${mpptActive.map((m,i) => {
-        const cw = Math.min(70, (288) / mpptActive.length - 4);
-        return `<rect x="${i*(cw+4)}" y="0" width="${cw}" height="14" rx="4"
-          fill="rgba(251,191,36,0.07)" stroke="rgba(251,191,36,0.15)" stroke-width="0.8"/>
-          <text x="${i*(cw+4)+cw/2}" y="9.5" text-anchor="middle" font-size="7.5"
-            fill="#f59e0b" font-family="Inter,sans-serif" font-weight="600">PV${i+1} · ${formatPower(m.power)}</text>`;
-      }).join('')}
-    </g>
-  ` : ''}
-</svg>`;
-
-      // ── Hilfs-Funktionen für Render ─────────────────────────────────
-      const DR = (name, val, color) =>
-        val !== null
-          ? `<div class="mv-dr"><span class="mv-dn">${name}</span><span class="mv-dv"${color?` style="color:${color}"`:''}>${val}</span></div>`
-          : '';
-
-      const balanceStatusLabel = {
-        'Balanciert':'Balanciert', 'green':'Balanciert',
-        'Geringe Unbalance':'Gering', 'yellow':'Gering',
-        'Moderate Unbalance':'Moderat', 'orange':'Moderat',
-        'Hohe Unbalance':'Hoch!', 'red':'Hoch!',
-      };
-      const balColor = {
-        'Balanciert':'#22c55e','green':'#22c55e',
-        'Geringe Unbalance':'#f59e0b','yellow':'#f59e0b',
-        'Moderate Unbalance':'#f97316','orange':'#f97316',
-        'Hohe Unbalance':'#ef4444','red':'#ef4444',
-      };
-      const balTrendLabel = {
-        'Improving':'↘ Verbessert sich','Worsening':'↗ Verschlechtert sich',
-        'Stable':'→ Stabil','Verbessert':'↘ Verbessert sich',
-        'Verschlechtert':'↗ Verschlechtert sich','Stabil':'→ Stabil',
-      };
-      const bColor = balColor[balStatus] || '#4b5563';
-      const bLabel = balanceStatusLabel[balStatus] || balStatus || '';
-      const bTrend = balTrendLabel[balTrend] || balTrend || '';
-      const balText = [bLabel, bTrend].filter(Boolean).join(' · ');
-
-
-      // ── SOC-Farbe (für Prism-Design angepasst) ─────────────────────
-      const socAccent = (() => {
-        if (soc === null) return '#1e3a4a';
-        if (soc <= 10)   return '#ef4444';
-        if (soc <= 20)   return '#ff8c32';
-        if (soc <= 40)   return '#f59e0b';
-        if (soc <= 65)   return '#22c55e';
-        return '#00cfff';
+      const selfPct = (() => {
+        if (totalSolar === null || totalSolar < 10) return null;
+        const exp = gridPower !== null && gridPower < 0 ? -gridPower : 0;
+        return Math.round(Math.max(0, Math.min(100, (totalSolar - exp) / totalSolar * 100))) + "%";
       })();
 
-      const powerAccent = dir === 'discharging' ? '#ff8c32' : (dir === 'charging' ? '#00cfff' : '#1e3a4a');
+      const gpathGrid  = gridImporting ? "M 58,0 L 58,196"   : "M 58,196 L 58,0";
+      const gpathSolar = "M 170,0 L 170,125";
+      const gpathHouse = "M 282,0 L 282,196";
+      const gpathBat   = dir === "discharging" ? "M 262,238 L 262,285" : "M 262,285 L 262,238";
 
-      // ── HTML zusammenstellen ────────────────────────────────────────
+      const houseSVG = `<svg viewBox="0 0 340 310" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
+  <defs>
+    <filter id="fg${uid}"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="fb${uid}"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="soft${uid}"><feGaussianBlur stdDeviation="2"/></filter>
+    <linearGradient id="lg${uid}" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="${gridCol}" stop-opacity="1"/><stop offset="100%" stop-color="${gridCol}" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ls${uid}" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d" stop-opacity="1"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="lh${uid}" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#67e8f9" stop-opacity="1"/><stop offset="100%" stop-color="#0891b2" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="lb${uid}" x1="0%" y1="${dir==="discharging"?"0%":"100%"}" x2="0%" y2="${dir==="discharging"?"100%":"0%"}">
+      <stop offset="0%" stop-color="${batCol}" stop-opacity="0.9"/><stop offset="100%" stop-color="${batCol}" stop-opacity="0"/>
+    </linearGradient>
+    <path id="pg${uid}" d="${gpathGrid}"/>
+    <path id="ps${uid}" d="${gpathSolar}"/>
+    <path id="ph${uid}" d="${gpathHouse}"/>
+    <path id="pb${uid}" d="${gpathBat}"/>
+  </defs>
+  <ellipse cx="172" cy="289" rx="118" ry="11" fill="#000" opacity="0.4"/>
+  <rect x="82" y="196" width="68" height="80" rx="2" fill="#0b1520"/>
+  <rect x="87" y="220" width="58" height="51" rx="1" fill="#091018" stroke="rgba(255,255,255,0.04)" stroke-width="0.8"/>
+  <line x1="87" y1="233" x2="145" y2="233" stroke="rgba(255,255,255,0.035)" stroke-width="0.6"/>
+  <line x1="87" y1="246" x2="145" y2="246" stroke="rgba(255,255,255,0.035)" stroke-width="0.6"/>
+  <line x1="87" y1="259" x2="145" y2="259" stroke="rgba(255,255,255,0.035)" stroke-width="0.6"/>
+  <rect x="148" y="166" width="110" height="110" rx="2" fill="#0d1825"/>
+  <rect x="148" y="166" width="110" height="110" rx="2" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.8"/>
+  <polygon points="74,198 116,160 158,198" fill="#0e1e2e"/>
+  <polygon points="74,198 116,160 158,198" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.8"/>
+  <polygon points="138,168 203,108 268,168" fill="#101f30"/>
+  <polygon points="138,168 203,108 268,168" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.8"/>
+  ${solarActive ? `<ellipse cx="200" cy="124" rx="35" ry="10" fill="#fbbf24" opacity="0.05" filter="url(#soft${uid})"/>` : ""}
+  <rect x="153" y="130" width="19" height="12" rx="1" fill="${solarActive?"#0d2e48":"#0a1825"}" stroke="${solarActive?"#1e5070":"#1a2535"}" stroke-width="0.7" opacity="${solarActive?1:0.4}"/>
+  <rect x="174" y="122" width="19" height="12" rx="1" fill="${solarActive?"#0d2e48":"#0a1825"}" stroke="${solarActive?"#1e5070":"#1a2535"}" stroke-width="0.7" opacity="${solarActive?1:0.4}"/>
+  <rect x="195" y="115" width="19" height="12" rx="1" fill="${solarActive?"#0d2e48":"#0a1825"}" stroke="${solarActive?"#1e5070":"#1a2535"}" stroke-width="0.7" opacity="${solarActive?1:0.4}"/>
+  <rect x="216" y="122" width="19" height="12" rx="1" fill="${solarActive?"#0d2e48":"#0a1825"}" stroke="${solarActive?"#1e5070":"#1a2535"}" stroke-width="0.7" opacity="${solarActive?1:0.4}"/>
+  <line x1="162" y1="130" x2="162" y2="142" stroke="${solarActive?"#1e5070":"#1a2535"}" stroke-width="0.5" opacity="${solarActive?1:0.4}"/>
+  <line x1="183" y1="122" x2="183" y2="134" stroke="${solarActive?"#1e5070":"#1a2535"}" stroke-width="0.5" opacity="${solarActive?1:0.4}"/>
+  <line x1="204" y1="115" x2="204" y2="127" stroke="${solarActive?"#1e5070":"#1a2535"}" stroke-width="0.5" opacity="${solarActive?1:0.4}"/>
+  <rect x="157" y="179" width="28" height="22" rx="2" fill="#091622" stroke="rgba(255,255,255,0.07)" stroke-width="0.7"/>
+  <line x1="171" y1="179" x2="171" y2="201" stroke="rgba(255,255,255,0.04)" stroke-width="0.7"/>
+  <line x1="157" y1="190" x2="185" y2="190" stroke="rgba(255,255,255,0.04)" stroke-width="0.7"/>
+  <rect x="158" y="180" width="12" height="10" rx="1" fill="rgba(255,210,80,0.07)"/>
+  <rect x="220" y="179" width="28" height="22" rx="2" fill="#091622" stroke="rgba(255,255,255,0.07)" stroke-width="0.7"/>
+  <line x1="234" y1="179" x2="234" y2="201" stroke="rgba(255,255,255,0.04)" stroke-width="0.7"/>
+  <line x1="220" y1="190" x2="248" y2="190" stroke="rgba(255,255,255,0.04)" stroke-width="0.7"/>
+  <rect x="183" y="221" width="34" height="55" rx="2" fill="#091018" stroke="rgba(255,255,255,0.06)" stroke-width="0.7"/>
+  <circle cx="213" cy="249" r="2" fill="rgba(255,190,80,0.2)"/>
+  <rect x="254" y="200" width="20" height="36" rx="3" fill="#081420" stroke="${batCol}" stroke-width="0.8" stroke-opacity="0.4"/>
+  <rect x="257" y="203" width="14" height="7" rx="1" fill="${batCol}" opacity="${soc !== null && soc > 66 ? 0.22 : 0.06}"/>
+  <rect x="257" y="212" width="14" height="7" rx="1" fill="${batCol}" opacity="${soc !== null && soc > 33 ? 0.16 : 0.06}"/>
+  <rect x="257" y="221" width="14" height="7" rx="1" fill="${batCol}" opacity="0.1"/>
+  <rect x="260" y="198" width="8" height="3" rx="1" fill="#081420" stroke="${batCol}" stroke-width="0.5" stroke-opacity="0.3"/>
+  <ellipse cx="90" cy="285" rx="42" ry="8" fill="rgba(0,0,0,0.3)"/>
+  <rect x="55" y="267" width="72" height="18" rx="7" fill="#0c1a26"/>
+  <rect x="63" y="259" width="56" height="16" rx="5" fill="#0c1a26"/>
+  <rect x="57" y="279" width="11" height="6" rx="3" fill="#060e16"/>
+  <rect x="114" y="279" width="11" height="6" rx="3" fill="#060e16"/>
+  <rect x="55" y="269" width="5" height="5" rx="1" fill="rgba(255,210,80,0.18)"/>
+  <rect x="122" y="269" width="5" height="5" rx="1" fill="rgba(255,80,80,0.12)"/>
+  ${showGrid ? `<line x1="58" y1="0" x2="58" y2="196" stroke="${gridCol}" stroke-width="10" opacity="0.06" stroke-linecap="round"/>
+  <line x1="58" y1="0" x2="58" y2="196" stroke="${gridCol}" stroke-width="2.5" opacity="0.14" stroke-linecap="round"/>
+  <line x1="58" y1="0" x2="58" y2="196" stroke="url(#lg${uid})" stroke-width="1.6" stroke-linecap="round" filter="url(#fg${uid})"/>
+  <line x1="58" y1="193" x2="82" y2="180" stroke="${gridCol}" stroke-width="1" opacity="0.22" stroke-linecap="round"/>` : ""}
+  ${solarActive ? `<line x1="170" y1="0" x2="170" y2="125" stroke="#fbbf24" stroke-width="10" opacity="0.06" stroke-linecap="round"/>
+  <line x1="170" y1="0" x2="170" y2="125" stroke="#fbbf24" stroke-width="2.5" opacity="0.14" stroke-linecap="round"/>
+  <line x1="170" y1="0" x2="170" y2="125" stroke="url(#ls${uid})" stroke-width="1.6" stroke-linecap="round" filter="url(#fg${uid})"/>
+  <circle cx="170" cy="125" r="3.5" fill="#fbbf24" opacity="0.45" filter="url(#fg${uid})"/>` : ""}
+  <line x1="282" y1="0" x2="282" y2="196" stroke="#22d3ee" stroke-width="10" opacity="0.06" stroke-linecap="round"/>
+  <line x1="282" y1="0" x2="282" y2="196" stroke="#22d3ee" stroke-width="2.5" opacity="0.14" stroke-linecap="round"/>
+  <line x1="282" y1="0" x2="282" y2="196" stroke="url(#lh${uid})" stroke-width="1.6" stroke-linecap="round" filter="url(#fg${uid})"/>
+  <line x1="282" y1="193" x2="258" y2="180" stroke="#22d3ee" stroke-width="1" opacity="0.22" stroke-linecap="round"/>
+  <line x1="262" y1="238" x2="262" y2="285" stroke="${batCol}" stroke-width="8" opacity="0.07" stroke-linecap="round"/>
+  <line x1="262" y1="238" x2="262" y2="285" stroke="url(#lb${uid})" stroke-width="1.5" stroke-linecap="round" filter="url(#fb${uid})"/>
+  ${showGrid ? mkPts(nPts(Math.abs(gridPower||0),3000), gridCol, "#pg"+uid, gridDur) : ""}
+  ${solarActive ? mkPts(nPts(totalSolar,8000), "#fcd34d", "#ps"+uid, solarDur) : ""}
+  ${mkPts(nPts(homePower||Math.abs(power||0),5000), "#67e8f9", "#ph"+uid, homeDur)}
+  ${dir !== "standby" ? mkPts(2, batCol, "#pb"+uid, batDur) : ""}
+  ${showGrid ? `<text x="58" y="16" text-anchor="middle" font-size="14" font-weight="700" fill="${gridCol}" font-family="Inter,sans-serif" letter-spacing="-0.5">${gridPower !== null ? fmtDE(Math.abs(gridPower)) : "— W"}</text>
+  <text x="58" y="28" text-anchor="middle" font-size="7" font-weight="600" fill="${gridCol}" font-family="Inter,sans-serif" letter-spacing="1.5" opacity="0.7">${gridTxt}</text>` : ""}
+  <text x="170" y="16" text-anchor="middle" font-size="14" font-weight="700" fill="${solarActive?"#fcd34d":"#1a2535"}" font-family="Inter,sans-serif" letter-spacing="-0.5">${totalSolar !== null ? fmtDE(totalSolar) : "— W"}</text>
+  <text x="170" y="28" text-anchor="middle" font-size="7" font-weight="600" fill="${solarActive?"#f59e0b":"#1a2535"}" font-family="Inter,sans-serif" letter-spacing="1.5" opacity="0.7">SOLAR</text>
+  <text x="282" y="16" text-anchor="middle" font-size="14" font-weight="700" fill="#67e8f9" font-family="Inter,sans-serif" letter-spacing="-0.5">${homePower !== null ? fmtDE(homePower) : acPower !== null ? fmtDE(acPower) : "— W"}</text>
+  <text x="282" y="28" text-anchor="middle" font-size="7" font-weight="600" fill="#0891b2" font-family="Inter,sans-serif" letter-spacing="1.5" opacity="0.7">HAUS</text>
+  <rect x="236" y="248" width="52" height="22" rx="8" fill="rgba(4,8,18,0.88)" stroke="${batCol}" stroke-width="0.7" stroke-opacity="0.35"/>
+  <text x="262" y="263" text-anchor="middle" font-size="13" font-weight="700" fill="${socCol}" font-family="Inter,sans-serif" letter-spacing="-0.3">${soc !== null ? Math.round(soc)+"%" : "—"}</text>
+  <text x="262" y="277" text-anchor="middle" font-size="6.5" font-weight="600" fill="${batCol}" font-family="Inter,sans-serif" letter-spacing="0.8" opacity="0.8">${batLbl}${Math.abs(power||0) > 20 ? " · "+fmtDE(Math.abs(power)) : ""}</text>
+  ${selfPct !== null ? `<text x="148" y="278" text-anchor="middle" font-size="9" font-weight="600" fill="#22c55e" font-family="Inter,sans-serif">${selfPct} Eigenverbrauch</text>` : modeLabel ? `<text x="148" y="278" text-anchor="middle" font-size="9" font-weight="500" fill="#1e3a4a" font-family="Inter,sans-serif">${modeLabel}</text>` : ""}
+</svg>`;
+
       const html = `
 <style>${CARD_CSS}</style>
 <div class="mv-card">
-
-  <!-- Header -->
   <div class="mv-hdr">
     <div class="mv-hdr-l">
-      <div class="mv-hdr-icon" style="background:${iconGrad}">🔋</div>
+      <div class="mv-hdr-icon" style="background:${iconGrad}">&#x1F50B;</div>
       <div>
         <div class="mv-hdr-name">${title}</div>
-        ${invState ? `<div class="mv-hdr-brand">${invState}</div>` : cfg.entity_prefix ? `<div class="mv-hdr-brand">${cfg.entity_prefix}</div>` : ''}
+        ${invState ? `<div class="mv-hdr-brand">${invState}</div>` : cfg.entity_prefix ? `<div class="mv-hdr-brand">${cfg.entity_prefix}</div>` : ""}
       </div>
     </div>
     <div class="mv-hdr-r">
-      ${alarm === 'fault' ? `<div class="mv-chip off" style="color:#ef4444;border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.08);animation:mv-blink 1s infinite"><div class="mv-chip-dot"></div>Alarm</div>` :
-        chipLabel ? `<div class="mv-chip ${chipOn?'on':'off'}"><div class="mv-chip-dot"></div>${chipOn ? 'Online' : 'Offline'}</div>` : ''}
+      ${alarm === "fault" ? `<div class="mv-chip off" style="color:#ef4444;border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.08);animation:mv-blink 1s infinite"><div class="mv-chip-dot"></div>Alarm</div>` : chipLabel ? `<div class="mv-chip ${chipOn?"on":"off"}"><div class="mv-chip-dot"></div>${chipOn?"Online":"Offline"}</div>` : ""}
     </div>
   </div>
-
-  <!-- SOC Hero -->
-  <div class="mv-soc-hero">
-    <div class="mv-soc-big">
-      <span class="mv-soc-num" style="color:${socAccent}">${soc !== null ? Math.round(soc) : '—'}</span>
-      <span class="mv-soc-pct">%</span>
-    </div>
-    <div class="mv-soc-right">
-      <div class="mv-power-num" style="color:${powerAccent}">${formatPower(Math.abs(power||0)).replace(' ','')}</div>
-      <div class="mv-dir-pill ${dir==='charging'?'c':dir==='discharging'?'d':'s'}">
-        ${dir==='charging'?'↑ Laden':dir==='discharging'?'↓ Entladen':'◎ Standby'}
-      </div>
-      ${modeLabel ? `<div class="mv-mode-txt">${modeLabel}</div>` : ''}
-    </div>
-  </div>
-
-  <!-- Energiefluss SVG -->
-  <div class="mv-flow-wrap">${svg}</div>
-
-  <!-- Stats -->
-  ${cfg.show_energy_stats ? `
-  <div class="mv-div"></div>
-  <div class="mv-stats">
-    <div class="mv-st c"><div class="mv-st-v">${dailyC !== null ? dailyC.toFixed(1) : '—'}</div><div class="mv-st-l">kWh ↑</div></div>
-    <div class="mv-st d"><div class="mv-st-v">${dailyD !== null ? dailyD.toFixed(1) : '—'}</div><div class="mv-st-l">kWh ↓</div></div>
-    <div class="mv-st s"><div class="mv-st-v">${stored !== null ? stored.toFixed(1) : '—'}</div><div class="mv-st-l">Gespeich.</div></div>
-    <div class="mv-st y"><div class="mv-st-v">${cycles !== null ? Math.round(cycles) : '—'}</div><div class="mv-st-l">Zyklen</div></div>
-  </div>
-  ` : ''}
-
-  <!-- Zell-Balance -->
-  ${hasBalance ? `
-  <div class="mv-bal-row">
-    <div class="mv-bal-l">
-      <div class="mv-bal-dot" style="background:${bColor};box-shadow:0 0 5px ${bColor}50"></div>
-      <span>Balance${bLabel ? ' · ' + bLabel : ''}${balTrend ? ' · ' + (balTrendLabel[balTrend]||balTrend) : ''}</span>
-    </div>
-    <div class="mv-bal-r">
-      ${balLast !== null ? `Δ <b style="color:${bColor}">${Math.round(balLast)} mV</b>` : ''}
-      ${balAvg !== null ? ` &nbsp; Ø ${Math.round(balAvg)} mV` : ''}
-    </div>
-  </div>
-  ` : ''}
-
-  <!-- Daten-Block -->
-  ${cfg.show_health ? `
-  <div class="mv-data-block">
-    <div>
-      ${DR('🌡 Temp', temp !== null ? temp.toFixed(1)+' °C' : null, temp ? (temp>50?'#ef4444':temp>40?'#f59e0b':'#22c55e') : null)}
-      ${mos1 !== null || mos2 !== null ? DR('🌡 MOS', [mos1,mos2].filter(v=>v!==null).map(v=>v.toFixed(0)).join(' / ')+' °C', null) : ''}
-      ${DR('⚡ U / I', [voltage ? voltage.toFixed(1)+'V' : null, current ? current.toFixed(1)+'A' : null].filter(Boolean).join(' · ') || null, null)}
-      ${maxCell !== null && minCell !== null ? DR('▲▼ Zelle', maxCell.toFixed(3)+'/'+minCell.toFixed(3)+' V', null) : ''}
-      ${cellDelta !== null ? DR('△ Balance', cellDelta+' mV', cellColor) : ''}
-    </div>
-    <div>
-      ${DR('↑ Gesamt', totalC !== null ? formatEnergy(totalC) : null, '#00cfff')}
-      ${DR('↓ Gesamt', totalD !== null ? formatEnergy(totalD) : null, '#ff8c32')}
-      ${monthlyC !== null ? DR('↑ Monat', monthlyC.toFixed(1)+' kWh', null) : ''}
-      ${monthlyD !== null ? DR('↓ Monat', monthlyD.toFixed(1)+' kWh', null) : ''}
-      ${DR('Effizienz', eff !== null ? eff.toFixed(1)+' %' : null, '#00cfff')}
-    </div>
-  </div>
-  ` : ''}
-
-  <!-- Steuerbuttons -->
-  ${showCtrl ? `
-  <div class="mv-ctrl">
-    <div class="mv-btn ${isForceC?'ac':''}" data-mv-act="charge">⚡ Laden</div>
-    <div class="mv-btn ${isForceD?'ad':''}" data-mv-act="discharge">↓ Entladen</div>
-    <div class="mv-btn ${isAuto?'aa':''}"   data-mv-act="auto">◎ Auto</div>
-  </div>
-  ` : ''}
-
-  <!-- Footer -->
+  <div class="mv-house-wrap">${houseSVG}</div>
+  ${cfg.show_energy_stats ? `<div class="mv-info-strip">
+    <div class="mv-info-item sol"><div class="mv-info-v">${dailyC !== null ? dailyC.toFixed(1) : "—"}</div><div class="mv-info-l">kWh Geladen</div></div>
+    <div class="mv-info-item chg"><div class="mv-info-v">${dailyD !== null ? dailyD.toFixed(1) : "—"}</div><div class="mv-info-l">kWh Entladen</div></div>
+    <div class="mv-info-item con"><div class="mv-info-v">${stored !== null ? stored.toFixed(1) : "—"}</div><div class="mv-info-l">kWh Gespeich.</div></div>
+    <div class="mv-info-item cyc"><div class="mv-info-v">${cycles !== null ? Math.round(cycles) : "—"}</div><div class="mv-info-l">Zyklen</div></div>
+  </div>` : ""}
+  ${cfg.show_health ? `<div class="mv-detail-row">
+    ${temp !== null ? `<div class="mv-detail-item">&#x1F321; <b style="color:${temp>50?"#ef4444":temp>40?"#f59e0b":"#22c55e"}">${temp.toFixed(1)}&deg;C</b></div>` : ""}
+    ${voltage !== null || current !== null ? `<div class="mv-detail-item">&#x26A1; <b>${[voltage?voltage.toFixed(1)+"V":null,current?current.toFixed(1)+"A":null].filter(Boolean).join(" · ")}</b></div>` : ""}
+    ${eff !== null ? `<div class="mv-detail-item">&#x1F4C8; <b style="color:#00cfff">${eff.toFixed(1)}%</b></div>` : ""}
+    ${cellDelta !== null ? `<div class="mv-detail-item">&#x2696; <b style="color:${cellDelta<50?"#22c55e":cellDelta<100?"#f59e0b":"#ef4444"}">${cellDelta}mV</b></div>` : ""}
+  </div>` : ""}
+  ${showCtrl ? `<div class="mv-ctrl">
+    <div class="mv-btn ${isForceC?"ac":""}" data-mv-act="charge">&#x26A1; Laden</div>
+    <div class="mv-btn ${isForceD?"ad":""}" data-mv-act="discharge">&#x2193; Entladen</div>
+    <div class="mv-btn ${isAuto?"aa":""}" data-mv-act="auto">&#x25CE; Auto</div>
+  </div>` : ""}
   <div class="mv-ftr">
-    <span>${lastUpd ? lastUpd : 'Warte auf Daten…'}</span>
-    <span>Energy Management Dashboard v${VERSION}${VERSION}</span>
+    <span>${lastUpd ? lastUpd : "Warte auf Daten..."}</span>
+    <span>Energy Management Dashboard v${VERSION}</span>
   </div>
-
 </div>`;
 
       this.shadowRoot.innerHTML = html;

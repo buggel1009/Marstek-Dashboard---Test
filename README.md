@@ -13,16 +13,16 @@
 <table>
   <tr>
     <td align="center">
-      <img src="screenshots/charging.jpg" width="260" alt="Laden — 72% SOC"/>
-      <br/><sub><b>Laden · Marstek Venus</b></sub>
+      <img src="screenshots/charging.jpg" width="220" alt="Solar + Einspeisung · 72% SOC"/>
+      <br/><sub><b>☀ Solar aktiv · Marstek Venus</b></sub>
     </td>
     <td align="center">
-      <img src="screenshots/discharging.jpg" width="260" alt="Entladen — 58% SOC"/>
-      <br/><sub><b>Entladen · Victron MultiPlus</b></sub>
+      <img src="screenshots/discharging.jpg" width="220" alt="Entladen · Netzbezug · 58% SOC"/>
+      <br/><sub><b>↓ Entladen · Victron MultiPlus</b></sub>
     </td>
     <td align="center">
-      <img src="screenshots/alarm.jpg" width="260" alt="Alarm — 18% SOC"/>
-      <br/><sub><b>Alarm · Sungrow SBR192</b></sub>
+      <img src="screenshots/alarm.jpg" width="220" alt="Niedrig · 18% SOC · Übertemperatur"/>
+      <br/><sub><b>⚠ Niedrig · Sungrow SBR192</b></sub>
     </td>
   </tr>
 </table>
@@ -46,7 +46,7 @@
 ## Installation via HACS
 
 1. **HACS** → *Frontend* → ⋮ → *Benutzerdefinierte Repositories*
-2. URL eintragen: `https://github.com/buggel1009/Energy-Managament-Dashboard`
+2. URL eintragen: `https://github.com/pauer/energy-management-dashboard`
 3. Kategorie: **Lovelace**
 4. Installieren → Home Assistant neu laden
 
