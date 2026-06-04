@@ -246,8 +246,15 @@
     .mv-detail-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #1e3a4a; }
     .mv-detail-item b { font-weight: 600; color: #3a5a70; }
 
-    /* Klickbare SVG-Nodes */
+    /* Klickbare Elemente */
+    [data-mv-entity] {
+      cursor: pointer;
+      transition: opacity 0.15s ease;
+    }
+    [data-mv-entity]:hover { opacity: 0.75; }
     .mv-house-wrap svg [data-mv-entity] { cursor: pointer; }
+    .mv-info-item[data-mv-entity]:hover { background: rgba(255,255,255,0.06); border-radius: 6px; }
+    .mv-detail-item[data-mv-entity]:hover { background: rgba(255,255,255,0.04); border-radius: 6px; padding: 2px 4px; }
 
     /* ── FOOTER ── */
     .mv-ftr {
@@ -888,16 +895,28 @@
   </div>
   <div class="mv-house-wrap">${houseSVG}</div>
   ${cfg.show_energy_stats ? `<div class="mv-info-strip">
-    <div class="mv-info-item sol"><div class="mv-info-v">${dailyC !== null ? dailyC.toFixed(1) : "—"}</div><div class="mv-info-l">kWh Geladen</div></div>
-    <div class="mv-info-item chg"><div class="mv-info-v">${dailyD !== null ? dailyD.toFixed(1) : "—"}</div><div class="mv-info-l">kWh Entladen</div></div>
-    <div class="mv-info-item con"><div class="mv-info-v">${stored !== null ? stored.toFixed(1) : "—"}</div><div class="mv-info-l">kWh Gespeich.</div></div>
-    <div class="mv-info-item cyc"><div class="mv-info-v">${cycles !== null ? Math.round(cycles) : "—"}</div><div class="mv-info-l">Zyklen</div></div>
+    <div class="mv-info-item sol" ${cfg.entities.total_daily_charging_energy ? `data-mv-entity="total_daily_charging_energy"` : ''}>
+      <div class="mv-info-v">${dailyC !== null ? dailyC.toFixed(1) : "—"}</div>
+      <div class="mv-info-l">kWh Geladen</div>
+    </div>
+    <div class="mv-info-item chg" ${cfg.entities.total_daily_discharging_energy ? `data-mv-entity="total_daily_discharging_energy"` : ''}>
+      <div class="mv-info-v">${dailyD !== null ? dailyD.toFixed(1) : "—"}</div>
+      <div class="mv-info-l">kWh Entladen</div>
+    </div>
+    <div class="mv-info-item con" ${cfg.entities.stored_energy ? `data-mv-entity="stored_energy"` : ''}>
+      <div class="mv-info-v">${stored !== null ? stored.toFixed(1) : "—"}</div>
+      <div class="mv-info-l">kWh Gespeich.</div>
+    </div>
+    <div class="mv-info-item cyc" ${cfg.entities.battery_cycle_count_calc ? `data-mv-entity="battery_cycle_count_calc"` : cfg.entities.battery_cycle_count ? `data-mv-entity="battery_cycle_count"` : ''}>
+      <div class="mv-info-v">${cycles !== null ? Math.round(cycles) : "—"}</div>
+      <div class="mv-info-l">Zyklen</div>
+    </div>
   </div>` : ""}
   ${cfg.show_health ? `<div class="mv-detail-row">
-    ${temp !== null ? `<div class="mv-detail-item">&#x1F321; <b style="color:${temp>50?"#ef4444":temp>40?"#f59e0b":"#22c55e"}">${temp.toFixed(1)}&deg;C</b></div>` : ""}
-    ${voltage !== null || current !== null ? `<div class="mv-detail-item">&#x26A1; <b>${[voltage?voltage.toFixed(1)+"V":null,current?current.toFixed(1)+"A":null].filter(Boolean).join(" · ")}</b></div>` : ""}
-    ${eff !== null ? `<div class="mv-detail-item">&#x1F4C8; <b style="color:#00cfff">${eff.toFixed(1)}%</b></div>` : ""}
-    ${cellDelta !== null ? `<div class="mv-detail-item">&#x2696; <b style="color:${cellDelta<50?"#22c55e":cellDelta<100?"#f59e0b":"#ef4444"}">${cellDelta}mV</b></div>` : ""}
+    ${temp !== null ? `<div class="mv-detail-item" data-mv-entity="internal_temperature">&#x1F321; <b style="color:${temp>50?"#ef4444":temp>40?"#f59e0b":"#22c55e"}">${temp.toFixed(1)}&deg;C</b></div>` : ""}
+    ${voltage !== null ? `<div class="mv-detail-item" data-mv-entity="battery_voltage">&#x26A1; <b>${[voltage?voltage.toFixed(1)+"V":null,current?current.toFixed(1)+"A":null].filter(Boolean).join(" · ")}</b></div>` : ""}
+    ${eff !== null ? `<div class="mv-detail-item" data-mv-entity="round_trip_efficiency_total">&#x1F4C8; <b style="color:#00cfff">${eff.toFixed(1)}%</b></div>` : ""}
+    ${cellDelta !== null ? `<div class="mv-detail-item" data-mv-entity="max_cell_voltage">&#x2696; <b style="color:${cellDelta<50?"#22c55e":cellDelta<100?"#f59e0b":"#ef4444"}">${cellDelta}mV</b></div>` : ""}
   </div>` : ""}
   <div class="mv-ftr">
     <span>${lastUpd ? lastUpd : "Warte auf Daten..."}</span>
