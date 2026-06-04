@@ -2,14 +2,15 @@
  * Energy Management Dashboard Card
  * Premium Lovelace Dashboard für Batteriespeicher
  * HACS Frontend Plugin
- * Version: 1.3.0
+ * Version: 1.0.0
  *
+ * https://github.com/buggel1009/Energy-Managament-Dashboard
  * Universell: Marstek, Victron, Sungrow, Fronius, Huawei, Fox ESS und mehr
  */
 (function () {
   'use strict';
 
-  const VERSION = '3.0.0';
+  const VERSION = '1.0.0';
   const CARD_TAG = 'energy-management-dashboard';
   const EDITOR_TAG = 'energy-management-dashboard-editor';
 
@@ -528,10 +529,8 @@
         title: 'Heimspeicher',
         entity_prefix: '',
         entities: {},
-        show_controls: true,
         show_health: true,
         show_energy_stats: true,
-        show_ac: true,
       };
     }
 
@@ -540,10 +539,8 @@
       this._config = {
         title: 'Heimspeicher',
         entity_prefix: '',
-        show_controls: true,
         show_health: true,
         show_energy_stats: true,
-        show_ac: true,
         ...config,
         entities: { ...(config.entities || {}) },
       };
@@ -728,7 +725,6 @@
         return o ? new Date(o.last_updated).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : null;
       })();
 
-      const showCtrl   = false; // Steuerbuttons deaktiviert
       const hasBalance = !!(balStatus || balLast !== null || balAvg !== null);
 
       // Hersteller-Icon-Farbe (basierend auf Titel oder Default)
@@ -1027,7 +1023,7 @@
 
       // Nur komplett neu rendern wenn sich strukturell etwas geändert hat
       // (nicht bei jeder Entitäts-Auswahl — das würde den Fokus zerstören)
-      const structuralKeys = ['title', 'entity_prefix', 'show_controls', 'show_health', 'show_energy_stats', 'show_ac'];
+      const structuralKeys = ['title', 'entity_prefix', 'show_health', 'show_energy_stats'];
       const needsFullRender = !this._config
         || structuralKeys.some(k => this._config[k] !== newCfg[k])
         || Object.keys(newCfg.entities).length !== Object.keys(this._config.entities || {}).length;
@@ -1143,10 +1139,8 @@
       `).join('');
 
       const toggles = [
-        { key: 'show_controls',     label: 'Steuerbuttons',        desc: 'Laden / Entladen / Automatik' },
         { key: 'show_energy_stats', label: 'Energie-Statistiken',  desc: 'Tages- und Gesamtenergiewerte' },
         { key: 'show_health',       label: 'Batterie-Gesundheit',  desc: 'Temperatur, Zellspannung, Balance' },
-        { key: 'show_ac',           label: 'AC-Leistung',          desc: 'Balkendiagramm der Netzleistung' },
       ];
 
       // ── Template ──────────────────────────────────────────────────────────
@@ -1351,7 +1345,7 @@
       name: 'Energy Management Dashboard',
       description: 'Premium Energy Management Dashboard für Batteriespeicher',
       preview: true,
-      documentationURL: 'https://github.com/pauer/powernest-dashboard',
+      documentationURL: 'https://github.com/buggel1009/Energy-Managament-Dashboard',
     });
   }
 

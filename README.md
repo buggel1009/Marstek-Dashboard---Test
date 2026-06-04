@@ -3,7 +3,7 @@
 **Premium Lovelace Dashboard-Karte für Batteriespeicher in Home Assistant**
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
-[![Version](https://img.shields.io/badge/version-3.0.0-00cfff.svg)](#)
+[![Version](https://img.shields.io/badge/version-1.0.0-00cfff.svg)](https://github.com/buggel1009/Energy-Managament-Dashboard/releases)
 [![HA](https://img.shields.io/badge/Home%20Assistant-2024.4+-blue.svg)](https://www.home-assistant.io)
 
 ---
@@ -11,19 +11,19 @@
 ## Vorschau
 
 <p align="center">
-  <img src="screenshots/charging.jpg" width="320" alt="Solar aktiv · Einspeisung · 72% SOC"/>
+  <img src="screenshots/charging.jpg" width="320" alt="Laden · Solar · E-Auto · 72% SOC"/>
 </p>
-<p align="center"><sub><b>☀ Solar aktiv · Einspeisung ins Netz · Marstek Venus E v3</b></sub></p>
+<p align="center"><sub><b>⚡ Laden (Batterie pulsiert grün) · ☀ Solar · 🚗 E-Auto lädt · Einspeisung</b></sub></p>
 
 <p align="center">
   <img src="screenshots/discharging.jpg" width="320" alt="Entladen · Netzbezug · 58% SOC"/>
   &nbsp;&nbsp;
-  <img src="screenshots/alarm.jpg" width="320" alt="Niedrig · 18% SOC · Übertemperatur"/>
+  <img src="screenshots/alarm.jpg" width="320" alt="Niedrig · 18% SOC · Übertemperatur · Alarm"/>
 </p>
 <p align="center">
-  <sub><b>↓ Entladen · Victron MultiPlus</b></sub>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub><b>⚠ Niedrig · Sungrow SBR192</b></sub>
+  <sub><b>🔋 Entladen (pulsiert rot) · Netzbezug</b></sub>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <sub><b>⚠ Alarm · niedriger SOC · Übertemperatur</b></sub>
 </p>
 
 ---
@@ -45,7 +45,7 @@
 ## Installation via HACS
 
 1. **HACS** → *Frontend* → ⋮ → *Benutzerdefinierte Repositories*
-2. URL eintragen: `https://github.com/pauer/energy-management-dashboard`
+2. URL eintragen: `https://github.com/buggel1009/Energy-Managament-Dashboard`
 3. Kategorie: **Lovelace**
 4. Installieren → Home Assistant neu laden
 
@@ -68,12 +68,21 @@ resources:
 type: custom:energy-management-dashboard
 title: Heimspeicher
 entity_prefix: marstek_venus_1   # → generiert Kopiervorlage im Editor
-show_controls: true
 show_health: true
 show_energy_stats: true
 entities:
+  # ── Pflicht ──
   battery_soc: sensor.marstek_venus_1_battery_soc
   battery_power: sensor.marstek_venus_1_battery_power
+  # ── Energiefluss (Haus-Visualisierung) ──
+  home_consumption: sensor.haus_gesamtverbrauch        # Haus-Strang (cyan)
+  grid_power: sensor.netz_leistung                     # + = Bezug, − = Einspeisung
+  mppt1_power: sensor.marstek_venus_1_mppt1_power       # Solar-Strang (gelb)
+  # ── E-Auto / Wallbox (optional) ──
+  ev_charge_power: sensor.wallbox_ladeleistung         # W — lädt → grünes Kabel
+  ev_soc: sensor.auto_akku_soc                         # %
+  ev_connected: binary_sensor.wallbox_verbunden        # on/off
+  # ── Detail-Werte ──
   internal_temperature: sensor.marstek_venus_1_internal_temperature
   battery_voltage: sensor.marstek_venus_1_battery_voltage
   battery_current: sensor.marstek_venus_1_battery_current
@@ -82,20 +91,11 @@ entities:
   stored_energy: sensor.marstek_venus_1_stored_energy
   battery_cycle_count_calc: sensor.marstek_venus_1_battery_cycle_count_calc
   round_trip_efficiency_total: sensor.marstek_venus_1_round_trip_efficiency_total
-  total_charging_energy: sensor.marstek_venus_1_total_charging_energy
-  total_discharging_energy: sensor.marstek_venus_1_total_discharging_energy
   max_cell_voltage: sensor.marstek_venus_1_max_cell_voltage
   min_cell_voltage: sensor.marstek_venus_1_min_cell_voltage
-  balance_status: sensor.marstek_venus_1_balance_status
-  balance_last_measurement: sensor.marstek_venus_1_balance_last_measurement
-  balance_trend: sensor.marstek_venus_1_balance_trend
   fault_status: sensor.marstek_venus_1_fault_status
   alarm_status: sensor.marstek_venus_1_alarm_status
   wifi_status: binary_sensor.marstek_venus_1_wifi_status
-  force_mode: select.marstek_venus_1_force_mode
-  ac_power: sensor.marstek_venus_1_ac_power
-  mppt1_power: sensor.marstek_venus_1_mppt1_power
-  mppt2_power: sensor.marstek_venus_1_mppt2_power
 ```
 
 > **Tipp:** Im visuellen Editor einfach den `entity_prefix` (z.B. `marstek_venus_1`) eingeben — die Karte generiert dann automatisch eine vollständige Kopiervorlage mit allen Entity-IDs.
@@ -106,16 +106,17 @@ entities:
 
 | Feature | Beschreibung |
 |---------|-------------|
-| 🔢 **Großer SOC** | Dominante Zahl mit dynamischer Farbe (blau → grün → gelb → rot) |
-| ⚡ **Live Power** | Lade-/Entladeleistung mit Richtungsanzeige |
-| 🌊 **Energiefluss** | Animiertes Solar → Batterie → Haus → Netz mit Partikel-Animation |
+| 🏠 **Haus-Visualisierung** | Realistisches Haus mit farbigen Energie-Strängen (Netz · Solar · Haus) |
+| 🔋 **Pulsierende Batterie** | Speicher leuchtet **grün beim Laden**, **rot beim Entladen** — Füllbalken-Welle |
+| 🌊 **Animierter Fluss** | Partikel auf jedem Strang, Geschwindigkeit proportional zur Leistung |
+| 🚗 **E-Auto / Wallbox** | Ladekabel + Badge mit Leistung & Akku-SOC, animiert beim Laden |
+| ⚡ **Netzrichtung** | Bezug (lila) ↔ Einspeisung (grün) automatisch erkannt |
 | 📊 **Tagesstatistik** | kWh geladen, entladen, gespeichert, Zyklen |
-| ⚖️ **Zell-Balance** | Status, Delta mV, Trend |
-| 🌡️ **Temperaturen** | Innen, MOS1/2, Zellen min/max |
-| 🎮 **Steuerung** | Laden / Entladen / Auto (wenn `force_mode` konfiguriert) |
-| 🔔 **Alarm** | Blinkender Alarm-Chip, rotierender Warnring bei Fehlern |
+| 🌡️ **Detail-Werte** | Temperatur, Spannung/Strom, Effizienz, Zell-Delta |
+| 👆 **Klickbar** | Jeder Wert öffnet den HA-Verlauf (More-Info) der Entität |
+| 🔔 **Alarm** | Blinkender Alarm-Chip bei Fehlern |
 | 🏭 **Multi-Hersteller** | Icon-Farbe passt sich automatisch dem Gerät an |
-| 🌑 **Dark Mode** | Natives Dark-Theme optimiert für HA-Dashboards |
+| 🌑 **Dark Mode** | Natives Dark-Theme, reine Lese-/Monitoring-Ansicht |
 
 ---
 
@@ -125,9 +126,20 @@ entities:
 |--------|-----|----------|--------------|
 | `title` | string | `Heimspeicher` | Anzeigename der Karte |
 | `entity_prefix` | string | — | Geräteprefix für Kopiervorlage im Editor |
-| `show_controls` | bool | `true` | Steuerbuttons (Laden/Entladen/Auto) anzeigen |
 | `show_health` | bool | `true` | Detaildaten (Temp, Spannung, Effizienz) anzeigen |
 | `show_energy_stats` | bool | `true` | Tagesstatistik-Reihe anzeigen |
+
+---
+
+## Changelog
+
+Alle Änderungen sind in der [CHANGELOG.md](CHANGELOG.md) dokumentiert.
+Bei einem Update zeigt HACS automatisch die Versionshinweise des jeweiligen
+GitHub-Releases an.
+
+> **Für Maintainer:** Damit die Änderungen im HACS-Update-Dialog erscheinen,
+> beim Taggen eines Releases (`1.0.0`, `1.1.0`, …) den passenden Abschnitt aus
+> der `CHANGELOG.md` in die **GitHub-Release-Beschreibung** kopieren.
 
 ---
 
@@ -137,4 +149,4 @@ MIT License — frei verwendbar, auch für kommerzielle Projekte.
 
 ---
 
-*Energy Management Dashboard v3.0.0 · Premium Design für Home Assistant*
+*Energy Management Dashboard v1.0.0 · Premium Design für Home Assistant*
