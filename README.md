@@ -10,22 +10,21 @@
 
 ## Vorschau
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="screenshots/charging.jpg" width="220" alt="Solar + Einspeisung · 72% SOC"/>
-      <br/><sub><b>☀ Solar aktiv · Marstek Venus</b></sub>
-    </td>
-    <td align="center">
-      <img src="screenshots/discharging.jpg" width="220" alt="Entladen · Netzbezug · 58% SOC"/>
-      <br/><sub><b>↓ Entladen · Victron MultiPlus</b></sub>
-    </td>
-    <td align="center">
-      <img src="screenshots/alarm.jpg" width="220" alt="Niedrig · 18% SOC · Übertemperatur"/>
-      <br/><sub><b>⚠ Niedrig · Sungrow SBR192</b></sub>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="screenshots/charging.jpg" width="320" alt="Solar aktiv · Einspeisung · 72% SOC"/>
+</p>
+<p align="center"><sub><b>☀ Solar aktiv · Einspeisung ins Netz · Marstek Venus E v3</b></sub></p>
+
+<p align="center">
+  <img src="screenshots/discharging.jpg" width="320" alt="Entladen · Netzbezug · 58% SOC"/>
+  &nbsp;&nbsp;
+  <img src="screenshots/alarm.jpg" width="320" alt="Niedrig · 18% SOC · Übertemperatur"/>
+</p>
+<p align="center">
+  <sub><b>↓ Entladen · Victron MultiPlus</b></sub>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <sub><b>⚠ Niedrig · Sungrow SBR192</b></sub>
+</p>
 
 ---
 
