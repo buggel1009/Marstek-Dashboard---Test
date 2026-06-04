@@ -246,19 +246,8 @@
     .mv-detail-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #1e3a4a; }
     .mv-detail-item b { font-weight: 600; color: #3a5a70; }
 
-    /* ── CONTROLS ── */
-    .mv-ctrl { display: flex; gap: 6px; padding: 10px 14px; }
-    .mv-btn {
-      flex: 1; padding: 9px 4px; border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02);
-      color: #1e3a4a; font-size: 9.5px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .5px; text-align: center;
-      cursor: pointer; font-family: inherit; transition: all .2s;
-    }
-    .mv-btn:hover { background: rgba(255,255,255,0.05); color: #3a5a70; }
-    .mv-btn.ac { background: rgba(0,207,255,0.09); color: #00cfff; border-color: rgba(0,207,255,0.22); }
-    .mv-btn.ad { background: rgba(255,140,50,0.09); color: #ff8c32; border-color: rgba(255,140,50,0.22); }
-    .mv-btn.aa { background: rgba(167,139,250,0.09); color: #a78bfa; border-color: rgba(167,139,250,0.22); }
+    /* Klickbare SVG-Nodes */
+    .mv-house-wrap svg [data-mv-entity] { cursor: pointer; }
 
     /* ── FOOTER ── */
     .mv-ftr {
@@ -696,11 +685,7 @@
       const cellDelta = maxCell !== null && minCell !== null ? Math.round((maxCell - minCell) * 1000) : null;
       const cellColor = cellDelta === null ? '#4b5563' : cellDelta < 50 ? '#22c55e' : cellDelta < 100 ? '#f59e0b' : '#ef4444';
 
-      const FORCE_C = ['Force Charge','force_charge'];
-      const FORCE_D = ['Force Discharge','force_discharge'];
-      const isForceC = FORCE_C.includes(forceMode);
-      const isForceD = FORCE_D.includes(forceMode);
-      const isAuto   = !isForceC && !isForceD;
+      // (Steuerbuttons entfernt – nur Lesebetrieb)
       const modeLabel = (() => {
         const m = { 'Force Charge':'Laden erzwungen','force_charge':'Laden erzwungen',
           'Force Discharge':'Entladen erzwungen','force_discharge':'Entladen erzwungen',
@@ -723,8 +708,7 @@
         return o ? new Date(o.last_updated).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : null;
       })();
 
-      const hasForce   = !!cfg.entities.force_mode;
-      const showCtrl   = cfg.show_controls && hasForce;
+      const showCtrl   = false; // Steuerbuttons deaktiviert
       const hasBalance = !!(balStatus || balLast !== null || balAvg !== null);
 
       // Hersteller-Icon-Farbe (basierend auf Titel oder Default)
@@ -879,6 +863,12 @@
   <text x="262" y="263" text-anchor="middle" font-size="13" font-weight="700" fill="${socCol}" font-family="Inter,sans-serif" letter-spacing="-0.3">${soc !== null ? Math.round(soc)+"%" : "—"}</text>
   <text x="262" y="277" text-anchor="middle" font-size="6.5" font-weight="600" fill="${batCol}" font-family="Inter,sans-serif" letter-spacing="0.8" opacity="0.8">${batLbl}${Math.abs(power||0) > 20 ? " · "+fmtDE(Math.abs(power)) : ""}</text>
   ${selfPct !== null ? `<text x="148" y="278" text-anchor="middle" font-size="9" font-weight="600" fill="#22c55e" font-family="Inter,sans-serif">${selfPct} Eigenverbrauch</text>` : modeLabel ? `<text x="148" y="278" text-anchor="middle" font-size="9" font-weight="500" fill="#1e3a4a" font-family="Inter,sans-serif">${modeLabel}</text>` : ""}
+
+  <!-- Klickbare Bereiche (unsichtbar) -->
+  ${showGrid && cfg.entities.grid_power ? `<rect x="20" y="0" width="80" height="230" rx="4" fill="transparent" data-mv-entity="grid_power" style="cursor:pointer"/>` : ''}
+  ${cfg.entities.mppt1_power || cfg.entities.mppt2_power ? `<rect x="120" y="0" width="100" height="145" rx="4" fill="transparent" data-mv-entity="${cfg.entities.mppt1_power ? 'mppt1_power' : 'mppt2_power'}" style="cursor:pointer"/>` : ''}
+  ${cfg.entities.home_consumption || cfg.entities.ac_power ? `<rect x="232" y="0" width="100" height="230" rx="4" fill="transparent" data-mv-entity="${cfg.entities.home_consumption ? 'home_consumption' : 'ac_power'}" style="cursor:pointer"/>` : ''}
+  ${cfg.entities.battery_soc ? `<rect x="215" y="235" width="90" height="55" rx="4" fill="transparent" data-mv-entity="battery_soc" style="cursor:pointer"/>` : ''}
 </svg>`;
 
       const html = `
@@ -909,11 +899,6 @@
     ${eff !== null ? `<div class="mv-detail-item">&#x1F4C8; <b style="color:#00cfff">${eff.toFixed(1)}%</b></div>` : ""}
     ${cellDelta !== null ? `<div class="mv-detail-item">&#x2696; <b style="color:${cellDelta<50?"#22c55e":cellDelta<100?"#f59e0b":"#ef4444"}">${cellDelta}mV</b></div>` : ""}
   </div>` : ""}
-  ${showCtrl ? `<div class="mv-ctrl">
-    <div class="mv-btn ${isForceC?"ac":""}" data-mv-act="charge">&#x26A1; Laden</div>
-    <div class="mv-btn ${isForceD?"ad":""}" data-mv-act="discharge">&#x2193; Entladen</div>
-    <div class="mv-btn ${isAuto?"aa":""}" data-mv-act="auto">&#x25CE; Auto</div>
-  </div>` : ""}
   <div class="mv-ftr">
     <span>${lastUpd ? lastUpd : "Warte auf Daten..."}</span>
     <span>Energy Management Dashboard v${VERSION}</span>
@@ -922,17 +907,24 @@
 
       this.shadowRoot.innerHTML = html;
 
-      // Event-Listener für Steuerbuttons
-      if (showCtrl) {
-        const eid = cfg.entities.force_mode;
-        this.shadowRoot.querySelectorAll('[data-mv-act]').forEach(el => {
-          el.addEventListener('click', () => {
-            const a = el.dataset.mvAct;
-            const opts = { charge: 'Force Charge', discharge: 'Force Discharge', auto: 'Auto' };
-            if (eid) this._callSvc('select', 'select_option', { entity_id: eid, option: opts[a] || 'Auto' });
-          });
+      // ── Klick-Handler: Entitäten öffnen ────────────────────────────
+      const fireMoreInfo = (entityId) => {
+        if (!entityId) return;
+        this.dispatchEvent(new CustomEvent('hass-more-info', {
+          detail: { entityId },
+          bubbles: true,
+          composed: true,
+        }));
+      };
+
+      this.shadowRoot.querySelectorAll('[data-mv-entity]').forEach(el => {
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', () => {
+          const key = el.dataset.mvEntity;
+          const entityId = cfg.entities[key];
+          fireMoreInfo(entityId);
         });
-      }
+      });
     }
   }
 
