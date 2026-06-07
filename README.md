@@ -3,7 +3,7 @@
 **Premium Lovelace Dashboard-Karte für Batteriespeicher in Home Assistant**
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
-[![Version](https://img.shields.io/badge/version-1.0.1-00cfff.svg)](https://github.com/buggel1009/Energy-Managament-Dashboard/releases)
+[![Version](https://img.shields.io/badge/version-1.1.0-00cfff.svg)](https://github.com/buggel1009/Energy-Managament-Dashboard/releases)
 [![HA](https://img.shields.io/badge/Home%20Assistant-2024.4+-blue.svg)](https://www.home-assistant.io)
 
 ---
@@ -87,13 +87,19 @@ entities:
   home_consumption: sensor.haus_gesamtverbrauch        # Haus-Strang (cyan)
   grid_power: sensor.netz_leistung                     # + = Bezug, − = Einspeisung
   mppt1_power: sensor.marstek_venus_1_mppt1_power       # Solar-Strang (gelb)
-  # ── E-Auto / Wallbox (optional) ──
+  # ── Kategorie 🚗 E-Auto / Wallbox (optional) ──
   ev_charge_power: sensor.wallbox_ladeleistung         # W — lädt → grünes Kabel
   ev_soc: sensor.auto_akku_soc                         # %
   ev_connected: binary_sensor.wallbox_verbunden        # on/off
-  # ── Wärmepumpe (optional) ──
+  ev_daily_energy: sensor.eauto_taeglich               # kWh heute (Helfer, s.u.)
+  # ── Kategorie 🔥 Wärmepumpe (optional) ──
   heatpump_power: sensor.waermepumpe_leistung          # W — aktiv → oranger Strang
   heatpump_state: binary_sensor.waermepumpe_aktiv      # on/off (optional)
+  heatpump_daily_energy: sensor.waermepumpe_taeglich   # kWh heute (Helfer, s.u.)
+  # ── Kategorie 🏠 Hausverbrauch (optional, Helfer s.u.) ──
+  home_daily_energy: sensor.hausverbrauch_taeglich     # kWh heute
+  home_weekly_energy: sensor.hausverbrauch_woechentlich # kWh diese Woche
+  home_monthly_energy: sensor.hausverbrauch_monatlich  # kWh diesen Monat
   # ── Detail-Werte ──
   battery_total_energy: sensor.marstek_venus_1_battery_total_energy   # Kapazität kWh → Laufzeit-Prognose
   internal_temperature: sensor.marstek_venus_1_internal_temperature
@@ -115,6 +121,60 @@ entities:
 
 ---
 
+## ⚠️ Helfer für Verbräuche (Tag / Woche / Monat)
+
+> Die Verbrauchs-Kacheln (🏠 Hausverbrauch, 🚗 E-Auto „heute", 🔥 Wärmepumpe „heute")
+> erwarten **kWh-Sensoren pro Zeitraum**. Solche Sensoren liefert kaum eine
+> Integration direkt — du musst sie in Home Assistant meist als **Helfer** anlegen.
+
+Am einfachsten über die **`utility_meter`**-Integration. Sie nimmt einen
+**fortlaufenden kWh-Zählerstand** (z. B. `sensor.hausverbrauch_energie`) und
+erzeugt daraus automatisch zurücksetzende Tages-/Wochen-/Monatswerte.
+
+**In `configuration.yaml` einfügen** (Quelle anpassen) und HA neu starten:
+
+```yaml
+utility_meter:
+  # ── Hausverbrauch ──
+  hausverbrauch_taeglich:
+    source: sensor.hausverbrauch_energie     # dein kWh-Gesamtzähler
+    cycle: daily
+  hausverbrauch_woechentlich:
+    source: sensor.hausverbrauch_energie
+    cycle: weekly
+  hausverbrauch_monatlich:
+    source: sensor.hausverbrauch_energie
+    cycle: monthly
+
+  # ── E-Auto / Wallbox (optional) ──
+  eauto_taeglich:
+    source: sensor.wallbox_energie           # kWh-Zähler der Wallbox
+    cycle: daily
+
+  # ── Wärmepumpe (optional) ──
+  waermepumpe_taeglich:
+    source: sensor.waermepumpe_energie       # kWh-Zähler der Wärmepumpe
+    cycle: daily
+```
+
+Danach die erzeugten Helfer in der Karte zuweisen:
+
+```yaml
+entities:
+  home_daily_energy:   sensor.hausverbrauch_taeglich
+  home_weekly_energy:  sensor.hausverbrauch_woechentlich
+  home_monthly_energy: sensor.hausverbrauch_monatlich
+  ev_daily_energy:     sensor.eauto_taeglich
+  heatpump_daily_energy: sensor.waermepumpe_taeglich
+```
+
+> **Kein kWh-Zähler vorhanden?** Aus einer reinen Leistung in **Watt** (z. B.
+> `sensor.hausverbrauch_leistung`) lässt sich per **Riemann-Summe** (Helfer →
+> „Integral-Sensor", Einheit `kWh`) zuerst ein Zählerstand erzeugen, der dann
+> als `source` für den `utility_meter` dient.
+
+---
+
 ## Features
 
 | Feature | Beschreibung |
@@ -127,8 +187,9 @@ entities:
 | 🔥 **Wärmepumpe** | Außeneinheit mit rotierendem Lüfter + Leistungs-Badge, animiert wenn aktiv |
 | ☀️ **Light- & Dark-Mode** | `theme: auto` folgt dem HA-Theme, oder fix `light` / `dark` |
 | ⚡ **Netzrichtung** | Bezug (lila) ↔ Einspeisung (grün) automatisch erkannt |
-| 📊 **Tagesstatistik** | kWh geladen, entladen, gespeichert, Zyklen |
-| 🌡️ **Detail-Werte** | Temperatur, Spannung/Strom, Effizienz, Zell-Delta |
+| 🗂️ **Kategorien** | Eigene Abschnitte mit Symbol: 🔋 Batterie · 🏠 Hausverbrauch · 🚗 E-Auto · 🔥 Wärmepumpe — je einzeln ein-/ausblendbar |
+| 📊 **Batterie-Werte** | Geladen/Entladen heute, Gespeichert, Zyklen, Temp, Spannung/Strom, Effizienz |
+| 📈 **Hausverbrauch** | kWh-Verbrauch Tag / Woche / Monat |
 | 👆 **Klickbar** | Jeder Wert öffnet den HA-Verlauf (More-Info) der Entität |
 | 🔔 **Alarm** | Blinkender Alarm-Chip bei Fehlern |
 | 🏭 **Multi-Hersteller** | Icon-Farbe passt sich automatisch dem Gerät an |
@@ -143,8 +204,10 @@ entities:
 | `title` | string | `Heimspeicher` | Anzeigename der Karte |
 | `entity_prefix` | string | — | Geräteprefix für Kopiervorlage im Editor |
 | `theme` | string | `auto` | `auto` (folgt HA-Theme), `light` oder `dark` |
-| `show_health` | bool | `true` | Detaildaten (Temp, Spannung, Effizienz) anzeigen |
-| `show_energy_stats` | bool | `true` | Tagesstatistik-Reihe anzeigen |
+| `show_battery` | bool | `true` | Kategorie 🔋 Batterie ein-/ausblenden |
+| `show_consumption` | bool | `true` | Kategorie 🏠 Hausverbrauch ein-/ausblenden |
+| `show_ev` | bool | `true` | Kategorie 🚗 E-Auto ein-/ausblenden |
+| `show_heatpump` | bool | `true` | Kategorie 🔥 Wärmepumpe ein-/ausblenden |
 
 ---
 
@@ -166,4 +229,4 @@ MIT License — frei verwendbar, auch für kommerzielle Projekte.
 
 ---
 
-*Energy Management Dashboard v1.0.1 · Premium Design für Home Assistant*
+*Energy Management Dashboard v1.1.0 · Premium Design für Home Assistant*
