@@ -3,7 +3,7 @@
 **Premium Lovelace Dashboard-Karte für Batteriespeicher in Home Assistant**
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
-[![Version](https://img.shields.io/badge/version-1.0.0-00cfff.svg)](https://github.com/buggel1009/Energy-Managament-Dashboard/releases)
+[![Version](https://img.shields.io/badge/version-1.0.1-00cfff.svg)](https://github.com/buggel1009/Energy-Managament-Dashboard/releases)
 [![HA](https://img.shields.io/badge/Home%20Assistant-2024.4+-blue.svg)](https://www.home-assistant.io)
 
 ---
@@ -11,19 +11,27 @@
 ## Vorschau
 
 <p align="center">
-  <img src="screenshots/charging.jpg" width="320" alt="Laden · Solar · E-Auto · 72% SOC"/>
+  <img src="screenshots/charging.jpg" width="320" alt="Dark-Mode · Laden · Solar · E-Auto · Wärmepumpe"/>
+  &nbsp;&nbsp;
+  <img src="screenshots/light.jpg" width="320" alt="Light-Mode · Laden · Solar · E-Auto · Wärmepumpe"/>
 </p>
-<p align="center"><sub><b>⚡ Laden (Batterie pulsiert grün) · ☀ Solar · 🚗 E-Auto lädt · Einspeisung</b></sub></p>
+<p align="center">
+  <sub><b>🌑 Dark-Mode</b> — ⚡ Laden · ☀ Solar · 🚗 E-Auto · 🔥 Wärmepumpe · ⏱️ „voll in ~1 h 20 min"</sub>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <sub><b>☀️ Light-Mode</b> — gleiches Bild, helles Theme</sub>
+</p>
+
+<br/>
 
 <p align="center">
-  <img src="screenshots/discharging.jpg" width="320" alt="Entladen · Netzbezug · 58% SOC"/>
+  <img src="screenshots/discharging.jpg" width="320" alt="Entladen · Netzbezug · Wärmepumpe · 58% SOC"/>
   &nbsp;&nbsp;
-  <img src="screenshots/alarm.jpg" width="320" alt="Niedrig · 18% SOC · Übertemperatur · Alarm"/>
+  <img src="screenshots/alarm.jpg" width="320" alt="Alarm · niedriger SOC · Übertemperatur"/>
 </p>
 <p align="center">
-  <sub><b>🔋 Entladen (pulsiert rot) · Netzbezug</b></sub>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub><b>⚠ Alarm · niedriger SOC · Übertemperatur</b></sub>
+  <sub><b>🔋 Entladen (pulsiert rot)</b> · Netzbezug · 🔥 Wärmepumpe</sub>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <sub><b>⚠ Alarm</b> · niedriger SOC · Übertemperatur</sub>
 </p>
 
 ---
@@ -68,6 +76,7 @@ resources:
 type: custom:energy-management-dashboard
 title: Heimspeicher
 entity_prefix: marstek_venus_1   # → generiert Kopiervorlage im Editor
+theme: auto                      # auto | light | dark
 show_health: true
 show_energy_stats: true
 entities:
@@ -82,7 +91,11 @@ entities:
   ev_charge_power: sensor.wallbox_ladeleistung         # W — lädt → grünes Kabel
   ev_soc: sensor.auto_akku_soc                         # %
   ev_connected: binary_sensor.wallbox_verbunden        # on/off
+  # ── Wärmepumpe (optional) ──
+  heatpump_power: sensor.waermepumpe_leistung          # W — aktiv → oranger Strang
+  heatpump_state: binary_sensor.waermepumpe_aktiv      # on/off (optional)
   # ── Detail-Werte ──
+  battery_total_energy: sensor.marstek_venus_1_battery_total_energy   # Kapazität kWh → Laufzeit-Prognose
   internal_temperature: sensor.marstek_venus_1_internal_temperature
   battery_voltage: sensor.marstek_venus_1_battery_voltage
   battery_current: sensor.marstek_venus_1_battery_current
@@ -108,8 +121,11 @@ entities:
 |---------|-------------|
 | 🏠 **Haus-Visualisierung** | Realistisches Haus mit farbigen Energie-Strängen (Netz · Solar · Haus) |
 | 🔋 **Pulsierende Batterie** | Speicher leuchtet **grün beim Laden**, **rot beim Entladen** — Füllbalken-Welle |
+| ⏱️ **Laufzeit-Prognose** | „voll in ~2 h" / „leer in ~4 h" (benötigt `battery_total_energy`) |
 | 🌊 **Animierter Fluss** | Partikel auf jedem Strang, Geschwindigkeit proportional zur Leistung |
 | 🚗 **E-Auto / Wallbox** | Ladekabel + Badge mit Leistung & Akku-SOC, animiert beim Laden |
+| 🔥 **Wärmepumpe** | Außeneinheit mit rotierendem Lüfter + Leistungs-Badge, animiert wenn aktiv |
+| ☀️ **Light- & Dark-Mode** | `theme: auto` folgt dem HA-Theme, oder fix `light` / `dark` |
 | ⚡ **Netzrichtung** | Bezug (lila) ↔ Einspeisung (grün) automatisch erkannt |
 | 📊 **Tagesstatistik** | kWh geladen, entladen, gespeichert, Zyklen |
 | 🌡️ **Detail-Werte** | Temperatur, Spannung/Strom, Effizienz, Zell-Delta |
@@ -126,6 +142,7 @@ entities:
 |--------|-----|----------|--------------|
 | `title` | string | `Heimspeicher` | Anzeigename der Karte |
 | `entity_prefix` | string | — | Geräteprefix für Kopiervorlage im Editor |
+| `theme` | string | `auto` | `auto` (folgt HA-Theme), `light` oder `dark` |
 | `show_health` | bool | `true` | Detaildaten (Temp, Spannung, Effizienz) anzeigen |
 | `show_energy_stats` | bool | `true` | Tagesstatistik-Reihe anzeigen |
 
@@ -149,4 +166,4 @@ MIT License — frei verwendbar, auch für kommerzielle Projekte.
 
 ---
 
-*Energy Management Dashboard v1.0.0 · Premium Design für Home Assistant*
+*Energy Management Dashboard v1.0.1 · Premium Design für Home Assistant*
